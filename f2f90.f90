@@ -1,16 +1,68 @@
-!     Copyright CERN, Geneva 1991, 1997 - Copyright and any other
-!     appropriate legal protection of these computer programs
-!     and associated documentation reserved in all countries
-!     of the world.
-!     Author: Michael Metcalf  (MichaelMetcalf@compuserve.com)
-!
-!     Requires the option -qcharlen=14400 with IBM's xlf.
-!
-!     Version 1.5. Differs from previous versions in that:
-!      (19/12/96)
-!                  Code modified to be Fortran 95 and ELF
-!                  compatible (no functional changes).
-!
+!***********************************************************************
+!                                                                      *
+!     f2f90 - A program to convert FORTRAN 77 fixed source form to     *
+!             FORTRAN 90 free source form.                             *
+!                                                                      *
+!     Copyright (C) 1997  Peter A. Rochford, Sverdrup Technology, Inc. *
+!                                                                      *
+!     This program conforms to the GNU GENERAL PUBLIC LICENSE          *
+!     version 2                                                        *
+!                                                                      *
+!     This program is free software; you can redistribute it and/or    *
+!     modify it under the terms of the GNU General Public License as   *
+!     published by the Free Software Foundation; either version 2 of   *
+!     the License, or (at your option) any later version.              *
+!                                                                      *
+!     This program is distributed in the hope that it will be useful,  *
+!     but WITHOUT ANY WARRANTY; without even the implied warranty of   *
+!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the    *
+!     GNU General Public License for more details.                     *
+!                                                                      *
+!     A copy of the GNU General Public License can be obtained via     *
+!     anonymous ftp at                                                 *
+!                                                                      *
+!     ftp://prep.ai.mit.edu/pub/gnu/COPYING-2.0                        *
+!                                                                      *
+!     or by writing to                                                 *
+!                                                                      *
+!     Free Software Foundation, Inc.                                   *
+!     675 Mass Ave                                                     *
+!     Cambridge, MA 02139                                              *
+!     USA.                                                             *
+!                                                                      *
+!     f2f90 is a modified version of the Copyright convert program     *
+!     developed by Michael Metcalf at CERN, Geneva.                    *
+!                                                                      *
+!     F2F90 PROGRAM                                                    *
+!     Author: Peter Rochford  (rochford@nrlssc.navy.mil)               *
+!             Advanced Systems Group                                   *
+!             MSAAP Building 9110                                      *
+!             Stennis Space Center, MS 39529                           *
+!                                                                      *
+!     Version 1.6. Differs from CONVERT in that:                       *
+!      (08/06/97)                                                      *
+!             The f90 "::" syntax is applied for type declaration      *
+!             statements CHARACTER, INTEGER, LOGICAL, and REAL.        *
+!                                                                      *
+!             Command line processing, Makefile, and man page made     *
+!             available for UNIX systems.                              *
+!                                                                      *
+!                                                                      *
+!     CONVERT PROGRAM                                                  *
+!     Copyright CERN, Geneva 1991, 1997 - Copyright and any other      *
+!     appropriate legal protection of these computer programs          *
+!     and associated documentation reserved in all countries           *
+!     of the world.                                                    *
+!                                                                      *
+!     Author: Michael Metcalf  (metcalf@cern.ch)                       *
+!                                                                      *
+!     Requires the option -qcharlen=14400 with IBM's xlf.              *
+!                                                                      *
+!     Version 1.5. Differs from previous versions in that:             *
+!      (12/19/96)                                                      *
+!             Code modified to be Fortran 95 and ELF compatible (no    *
+!             functional changes).                                     *
+!                                                                      *
 !***********************************************************************
 !                                                                      *
 !                                                                      *
@@ -18,7 +70,7 @@
 !  form. It also formats the code by indenting the bodies of DO-loops  *
 !  and IF-blocks by ISHIFT columns. Statement keywords are             *
 !  followed if necessary by a blank, and blanks within tokens are      *
-!  are suppressed; this handling of blanks is optional.                *
+!  suppressed; this handling of blanks is optional.                    *
 !    If a CONTINUE statement terminates a single DO loop, it is        *
 !  replaced by END DO.                                                 *
 !    Procedure END statements have the procedure name added, if        *
@@ -33,9 +85,10 @@
 !  non-standard IMPLICIT statements.                                   *
 !    Optionally, interface blocks only may be produced; this requires  *
 !  blanks processing to be requested. The interface blocks are         *
-!  compatible with both the old and new source forms.                  *
+!  compatible with both the old and new source forms. Files containing *
+!  interface blocks will have a ".h" extension.                        *
 !                                                                      *
-!    Usage: the program reads one data record in free format from the  *
+!   Usage: the program reads one data record in free format from the   *
 !          default input unit. This contains:                          *
 !                                                                      *
 !                        name of file                                  *
@@ -48,7 +101,7 @@
 !                               name 3 10 T F                          *
 !   To do nothing but change the source form of a file prog.f type     *
 !                               prog 0  0 F F                          *
-!       or simply                                                      *
+!   or simply                                                          *
 !                               prog /                                 *
 !   For more extensive processing type, say,                           *
 !                               prog 3 10 t f                          *
@@ -112,7 +165,9 @@
    implicit none
    public
 !
-      INTEGER, SAVE :: ISHIFT , MXDPTH , NIN , NOUT, TIME0
+      CHARACTER (LEN=256) :: NAMEORIG
+      INTEGER, PARAMETER :: INFILE=5,NIN=1,NOUT=2
+      INTEGER, SAVE :: ISHIFT, MXDPTH, TIME0
       LOGICAL, SAVE :: BLANKS, INTBFL
 !
    END MODULE DATA
@@ -305,6 +360,71 @@
 !
 99 RETURN
    END SUBROUTINE BLANK
+   SUBROUTINE CONVCASE(CIN,COUT,LEN,UPCASE)
+   IMPLICIT NONE
+!
+   INTEGER ::    LEN
+   CHARACTER (LEN=*) :: CIN,COUT
+   LOGICAL ::    UPCASE
+!
+!**********
+!*
+!  1) CONVERT A CHARACTER STRING TO ALL UPPER CASE OR ALL
+!     LOWERCASE.
+!
+!  2) ARGUMENTS:
+!
+!     CIN    = INPUT CHARACTER STRING
+!     COUT   = OUTPUT CHARACTER STRING IN CONVERTED CASE
+!     LEN    = THE CHARACTER LENGTH OF CIN
+!     UPCASE = CASE CONVERSION FLAG
+!            = .TRUE.  FOR UPPER CASE
+!            = .FALSE. FOR LOWER CASE
+!
+!  2) ALAN J. WALLCRAFT, PLANNING SYSTEMS INC., NOVEMBER 1992.
+!     PETER A. ROCHFORD, SVERDRUP TECHNOLOGY INC., MAY 1996.
+!       ALLOWED OPTION OF CONVERSION TO LOWERCASE.
+!*
+!**********
+!
+   INTEGER :: I,ILETTR,ILOWR0,IUPPR0
+!
+   IUPPR0 = IACHAR('A') - 1
+   ILOWR0 = IACHAR('a') - 1
+   COUT = ''
+!
+   IF(UPCASE) THEN
+     DO I= 1,LEN
+       ILETTR = IACHAR(CIN(I:I)) - ILOWR0
+       IF     (ILETTR.GE.1 .AND. ILETTR.LE.26) THEN
+!
+!        CONVERT TO UPPER CASE.
+!
+         COUT(I:I) = ACHAR( IUPPR0 + ILETTR )
+       ELSE
+!
+!        COPY UNCHANGED.
+!
+         COUT(I:I) = CIN(I:I)
+       ENDIF
+     ENDDO
+   ELSE
+     DO I= 1,LEN
+       ILETTR = IACHAR(CIN(I:I)) - IUPPR0
+       IF     (ILETTR.GE.1 .AND. ILETTR.LE.26) THEN
+!
+!        CONVERT TO UPPER CASE.
+!
+         COUT(I:I) = ACHAR( ILOWR0 + ILETTR )
+       ELSE
+!
+!        COPY UNCHANGED.
+!
+         COUT(I:I) = CIN(I:I)
+       ENDIF
+     ENDDO
+   ENDIF
+   END SUBROUTINE CONVCASE
    SUBROUTINE IDENTIFY (IRET)
 !
 !***********************************************************************
@@ -318,11 +438,11 @@
    implicit none
 !
       CHARACTER(LEN=5), PARAMETER :: ENDIF='ENDIF' , THEN='NEHT)',     &
-                                     THENLC='neht)'
-      CHARACTER(LEN=3), PARAMETER :: BIF='IF('
-      CHARACTER(LEN=2), PARAMETER :: DO='DO'
-      CHARACTER(LEN=7), PARAMETER :: FORMAT='FORMAT('
-      CHARACTER(LEN=4), PARAMETER :: ELSE='ELSE'
+                                     ENDIFLC='endif', THENLC='neht)'
+      CHARACTER(LEN=3), PARAMETER :: BIF='IF(',BIFLC='if('
+      CHARACTER(LEN=2), PARAMETER :: DO='DO',DOLC='do'
+      CHARACTER(LEN=7), PARAMETER :: FORMAT='FORMAT(', FORMATLC='format('
+      CHARACTER(LEN=4), PARAMETER :: ELSE='ELSE', ELSELC='else'
       CHARACTER(LEN=5)            :: INTFIL
       INTEGER, INTENT(OUT)        :: IRET
 !
@@ -335,44 +455,50 @@
       IF (KNTDO /= 0) THEN
          IF (LABEL == LABLDO(KNTDO)) THEN
             IRET = 2
-            GO TO 99
+            RETURN
          END IF
       END IF
 !
 !   Check whether any of remaining possibilities
       DO L7 = 1 , LENST
          IF (STAMNT(L7:L7) == ' ') CYCLE
-         IF (STAMNT(L7:L7) == 'E') THEN
+         IF (STAMNT(L7:L7) == 'E' .OR. STAMNT(L7:L7) == 'e') THEN
             DO L11 = L7+1 , LENST
                IF (STAMNT(L11:L11) == ' ') CYCLE
-               IF (STAMNT(L11:L11) == ENDIF(2:2)) GO TO 6
-               IF (STAMNT(L11:L11) == ELSE(2:2)) GO TO 3
-               GO TO 99
+               IF (STAMNT(L11:L11) == ENDIF(2:2) .OR. &
+                   STAMNT(L11:L11) == ENDIFLC(2:2) ) GO TO 6
+               IF (STAMNT(L11:L11) == ELSE(2:2) .OR.  &
+                   STAMNT(L11:L11) == ELSELC(2:2) ) GO TO 3
+               RETURN
             END DO
          END IF
-         IF (STAMNT(L7:L7) == BIF(:1)) GO TO 9
-         IF (STAMNT(L7:L7) == DO(:1)) GO TO 15
-         IF (STAMNT(L7:L7) == FORMAT(:1)) GO TO 31
-         GO TO 99
+         IF (STAMNT(L7:L7) == BIF(:1) .OR. &
+             STAMNT(L7:L7) == BIFLC(:1) ) GO TO 9
+         IF (STAMNT(L7:L7) == DO(:1) .OR. &
+             STAMNT(L7:L7) == DOLC(:1)) GO TO 15
+         IF (STAMNT(L7:L7) == FORMAT(:1) .OR. &
+             STAMNT(L7:L7) == FORMATLC(:1)) GO TO 31
+         RETURN
       END DO
-      GO TO  99
+      RETURN
 !
 !   Check whether ELSE or ELSEIF
     3 K8 = 3
       DO L12 = L11+1 , LENST
          IF (STAMNT(L12:L12) == ' ') CYCLE
-         IF (STAMNT(L12:L12) /= ELSE(K8:K8)) GO TO 99
+         IF (STAMNT(L12:L12) /= ELSE(K8:K8) .AND. &
+             STAMNT(L12:L12) /= ELSELC(K8:K8)) RETURN
          IF (K8 == 4) GO TO 5
          K8 = K8+1
       END DO
-      GO TO  99
+      RETURN
     5 IF (L12 >= LENST) THEN
          IRET = 6
-         GO TO 99
+         RETURN
       END IF
       IF (STAMNT(L12+1:LENST) == ' ') THEN
          IRET = 6
-         GO TO 99
+         RETURN
       END IF
       K2 = 1
       IRET = 6
@@ -383,31 +509,33 @@
     6 K1 = 3
       DO L1 = L11+1 , LENST
          IF (STAMNT(L1:L1) == ' ') CYCLE
-         IF (STAMNT(L1:L1) /= ENDIF(K1:K1)) GO TO 99
+         IF (STAMNT(L1:L1) /= ENDIF(K1:K1) .AND. &
+             STAMNT(L1:L1) /= ENDIFLC(K1:K1)) RETURN
          IF (K1 == 5) EXIT
          K1 = K1+1
       END DO
       IF (L1 >= LENST) THEN
          IRET = 4
-         GO TO 99
+         RETURN
       END IF
       IF (STAMNT(L1+1:LENST) == ' ') IRET = 4
-      GO TO  99
+      RETURN
 !
 !   Check whether beginning of IF-block
     9 K2 = 2
       IRET = 3
    10 DO L2 = L7+1 , LENST
          IF (STAMNT(L2:L2) == ' ') CYCLE
-         IF (STAMNT(L2:L2) /= BIF(K2:K2)) THEN
+         IF (STAMNT(L2:L2) /= BIF(K2:K2) .AND. &
+             STAMNT(L2:L2) /= BIFLC(K2:K2)) THEN
             IRET = 0
-            GO TO 99
+            RETURN
          END IF
          IF (K2 == 3) GO TO 12
          K2 = K2+1
       END DO
       IRET = 0
-      GO TO  99
+      RETURN
 !
 !   Backward search for )THEN at end of IF statement (to save
 !   scanning the condition).
@@ -417,21 +545,22 @@
          IF (STAMNT(L3:L3) /= THEN(K3:K3) .AND.                        &
              STAMNT(L3:L3) /= THENLC(K3:K3)) THEN
             IRET = 0
-            GO TO 99
+            RETURN
          END IF
-         IF (K3 == 5) GO TO 99
+         IF (K3 == 5) RETURN
          K3 = K3+1
       END DO
       IRET = 0
-      GO TO  99
+      RETURN
 !
 !   Check whether beginning of DO-loop
    15 DO L4 = L7+1 , LENST
          IF (STAMNT(L4:L4) == ' ') CYCLE
-         IF (STAMNT(L4:L4) == DO(2:2)) GO TO 17
-         GO TO 99
+         IF (STAMNT(L4:L4) == DO(2:2) .OR. &
+             STAMNT(L4:L4) == DOLC(2:2)) GO TO 17
+         RETURN
       END DO
-      GO TO  99
+      RETURN
 !
 !   Have DO - check label
    17 K5 = 0
@@ -444,9 +573,9 @@
          IF (K5 > 5) GO TO 20
          INTFIL(K5:K5) = STAMNT(L5:L5)
       END DO
-      IF (K5 == 0) GO TO 99
+      IF (K5 == 0) RETURN
    20 READ (INTFIL , '(BN , I5)') LABLNO
-      IF (LABLNO == 0) GO TO 99
+      IF (LABLNO == 0) RETURN
 !
 !   Have label - check comma
       DO L8 = L5, LENST
@@ -455,7 +584,7 @@
          GO TO 23
       END DO
       IRET = 1
-      GO TO  99
+      RETURN
 !
 !   Have a DO and label with no comma.
 !   Check for variable whose first of maximum of six
@@ -468,7 +597,7 @@
          IF (K6 == 0) THEN
             IF ((LLT(STAMNT(L9:L9), 'A') .OR. LGT(STAMNT(L9:L9), 'Z')) &
            .AND.(LLT(STAMNT(L9:L9), 'a') .OR. LGT(STAMNT(L9:L9), 'z')))&
-            GO TO 99
+            RETURN
             K6 = 1
          ELSE IF (LGE(STAMNT(L9:L9) , 'A') .AND. LLE(STAMNT(L9:L9),'Z')&
             .OR. LGE(STAMNT(L9:L9) , 'a') .AND. LLE(STAMNT(L9:L9) ,'z')&
@@ -477,20 +606,20 @@
             K6 = K6+1
             IF (K6 == 6) GO TO 26
          ELSE
-            IF (K6 == 0) GO TO 99
+            IF (K6 == 0) RETURN
             GO TO 25
          END IF
       END DO
-      GO TO  99
+      RETURN
 !
 !   Expect an equals sign
    25 L9=L9-1
    26 DO L10 = L9+1 , LENST
          IF (STAMNT(L10:L10) == ' ') CYCLE
          IF (STAMNT(L10:L10) == '=') GO TO 28
-         GO TO 99
+         RETURN
       END DO
-      GO TO  99
+      RETURN
 !
 !   Search for bare comma
    28 LPAREN = 0
@@ -505,7 +634,7 @@
                IF (LPAREN == 0) GO TO 30
                CYCLE
             ELSE
-               GO TO 99
+               RETURN
             END IF
          ELSE IF (STAMNT(L6:L6) == '(') THEN
             LPAREN = LPAREN+1
@@ -514,33 +643,120 @@
          END IF
          KNTCH = 1
       END DO
-      GO TO  99
+      RETURN
    30 IRET = 1
 !
 !   Insert blank after label
-      IF (.NOT.BLANKS .OR. LENST >= LEN) GO TO 99
+      IF (.NOT.BLANKS .OR. LENST >= LEN) RETURN
       DO L10 = LENST, L5, -1
          STAMNT(L10+1:L10+1) = STAMNT(L10:L10)
       END DO
       STAMNT(L5:L5) = ' '
       LENST = LENST  + 1
-      GO TO  99
+      RETURN
 !
 !   Identify FORMAT statement
-   31 IF (LABEL == 0) GO TO 99
+   31 IF (LABEL == 0) RETURN
       K7 = 2
       DO L11 = L7+1 , LENST
          IF (STAMNT(L11:L11) == ' ') CYCLE
-         IF (STAMNT(L11:L11) /= FORMAT(K7:K7)) GO TO 99
+         IF (STAMNT(L11:L11) /= FORMAT(K7:K7) .AND. &
+             STAMNT(L11:L11) /= FORMATLC(K7:K7)) RETURN
          IF (K7 == 7) GO TO 33
          K7 = K7+1
       END DO
-      GO TO  99
+      RETURN
    33 IRET = 5
 !
-99 RETURN
    END SUBROUTINE IDENTIFY
-   SUBROUTINE KEYWORD(ASSIGN, SKIP)
+   SUBROUTINE INPUT(NAME)
+      USE DATA
+!
+      CHARACTER (LEN=*) :: NAME
+      CHARACTER (LEN=512) :: CARG
+      CHARACTER (LEN=256) :: CRECORD
+      INTEGER :: I,IBLANK,NARGC
+      LOGICAL :: LGETARG
+!
+!     External functions
+      INTEGER :: IARGC
+!
+      LGETARG = .TRUE. ! Obtain arguments directly from command line.
+!      LGETARG = .FALSE. ! Obtain arguments from program prompt.
+!
+      CARG = ''
+      IF(LGETARG) THEN 
+!       Obtain arguments directly from command line.
+!       Assumes C library is available
+        NARGC = IARGC()
+        IF (NARGC /= 1 .AND. NARGC /= 5) CALL USAGE
+
+          DO I = 1, NARGC
+          CALL GET_ARGUMENT(I,CARG)
+
+          ARGS_CASE: SELECT CASE(I)
+           CASE (1)
+             NAME = TRIM(CARG)
+           CASE (2)
+             READ (CARG, *) ISHIFT
+           CASE (3)
+             READ (CARG, *) MXDPTH
+           CASE (4)
+             IF(CARG(1:1) /= 'f' .AND. CARG(1:1) /= 'F' .AND. &
+                CARG(1:1) /= 't' .AND. CARG(1:1) /= 'T') THEN
+               WRITE(*,*) ' '
+               WRITE(*,*) 'blank_flag must be one of [ftFT].'
+               WRITE(*,*) ' '
+               WRITE(*,*) 'Usage: f2f90 filename ishift indent_level &
+                          &blank_flag interface_flag'
+               WRITE(*,*) ' '
+               CALL TERMINATE(1)
+             ENDIF
+             READ (CARG, *) BLANKS
+           CASE (5)
+             IF(CARG(1:1) /= 'f' .AND. CARG(1:1) /= 'F' .AND. &
+                CARG(1:1) /= 't' .AND. CARG(1:1) /= 'T') THEN
+               WRITE(*,*) ' '
+               WRITE(*,*) 'interface_flag must be one of [ftFT].'
+               WRITE(*,*) ' '
+               WRITE(*,*) 'Usage: f2f90 filename ishift indent_level &
+                          &blank_flag interface_flag'
+               WRITE(*,*) ' '
+               CALL TERMINATE(1)
+             ENDIF
+             READ (CARG, *) INTBFL
+          END SELECT ARGS_CASE
+        ENDDO
+        IF(NARGC == 1) THEN
+          WRITE (*,'(" Defaults used for options.")')
+        ENDIF
+!
+      ELSE
+!
+!      Obtain arguments from prompts because C library is unavailable
+       WRITE (6, FMT='(A)', ADVANCE= 'NO') &
+         'Enter arguments within single quotes:'
+       READ (*,*) CRECORD
+       CRECORD = ADJUSTL(CRECORD)
+
+!      Process record for arguments
+       IBLANK = INDEX(CRECORD,' ')
+       IF(IBLANK==0) CALL USAGE
+       NAME = CRECORD(:IBLANK)      
+       IF(NAME == ' ') CALL USAGE
+       CRECORD=ADJUSTL(CRECORD(IBLANK:))
+       LENGTH = LEN_TRIM(CRECORD)
+       IF(LENGTH > 0) THEN
+         READ (CRECORD, *, END = 1, ERR = 1) ISHIFT, MXDPTH , BLANKS, INTBFL
+       ELSE
+         WRITE (*,'(" Defaults used for options.")')
+       ENDIF
+       RETURN
+!      Specify usage
+1      CALL USAGE
+     ENDIF
+   END SUBROUTINE INPUT
+   SUBROUTINE KEYWORD(ASSIGN, SKIP, LOWERCASE)
 !
 !   To check whether those initial keywords of the statement which
 !   require it are followed by a blank, to add one if necessary, and
@@ -551,18 +767,18 @@
       USE STRUCTURE
    implicit none
 !
-      LOGICAL, INTENT(OUT) :: ASSIGN, SKIP
+      LOGICAL, INTENT(OUT) :: ASSIGN, SKIP, LOWERCASE
 !
       INTEGER, PARAMETER    :: NKEY = 42, MAXLEN = 15
       CHARACTER(LEN=MAXLEN) :: BEGIN
       CHARACTER(LEN=LEN)    :: BUFFER
       CHARACTER(LEN=3)      :: THREE
-      CHARACTER(LEN=32)     :: NAMEOF
+      CHARACTER(LEN=256)     :: NAMEOF
       CHARACTER(LEN=6), SAVE :: ARGNAM(445)
-      LOGICAL               :: IFASS
+      LOGICAL               :: IFASS,LARGUMENT,LPROGRAM_ENTITY
       INTEGER, SAVE         :: LENARG(445)
 !
-      CHARACTER(LEN=MAXLEN), PARAMETER, dimension(nkey) :: KEYS = (/   &
+      CHARACTER(LEN=MAXLEN), PARAMETER, DIMENSION(NKEY) :: KEYS = (/   &
       'ASSIGN         ', 'BACKSPACE      ', 'BLOCKDATA      ',         &
       'CALL           ', 'CHARACTER      ', 'CLOSE          ',         &
       'COMMON         ', 'COMPLEX        ', 'CONTINUE       ',         &
@@ -577,7 +793,7 @@
       'PROGRAM        ', 'READ           ', 'REAL           ',         &
       'RETURN         ', 'REWIND         ', 'SAVE           ',         &
       'STOP           ', 'SUBROUTINE     ', 'WRITE          '/)
-      INTEGER, PARAMETER, dimension(nkey) :: LK =                      &
+      INTEGER, PARAMETER, DIMENSION(NKEY) :: LK =                      &
             (/6, 9, 9, 4,                                              &
               9, 5, 6, 7, 8, 4,                                        &
               9,15, 2, 6, 4,                                           &
@@ -621,8 +837,8 @@
       'return         ', 'rewind         ', 'save           ',         &
       'stop           ', 'subroutine     ', 'write          '/)
 !
-      integer :: l1, l2, l3, l4, l5, l6, l7, l20, lparen, kntap, kntch,&
-                 lc, lcc, l33, next, l8, napos, lsave, name_length
+      integer :: l1, l2, l3, l4, l5, l6, l7, l8, l20, lparen, kntap, kntch,&
+                 lc, lcc, l33, next, napos, lsave, name_length
 !
 !   Test for statement function statement or assignment statement
       SKIP = INTFL
@@ -666,6 +882,7 @@
 !
 !   Is this a keyword? Failure of this test is not fatal, in order to
 !   allow for non-standard syntax extensions.
+      LOWERCASE = .FALSE.
     3 DO L3 = 1, NKEY
          IF     (BEGIN(:LK(L3)) == KEYS(L3)(:LK(L3))) THEN
             GO TO 5
@@ -676,7 +893,8 @@
                LCC = LCC + 1
                IF (LCC == LK(L3)) EXIT
             END DO
-            STAMNT(:L33) = KEYS(L3)(:LK(L3))
+            STAMNT(:L33) = KEYSLC(L3)(:LK(L3))
+            LOWERCASE = .TRUE.
             GO TO 5
          END IF
       END DO
@@ -782,31 +1000,59 @@
 !
 !   Test for non-executable statement keyword
    99 IF (ASSIGN) GO TO 98
-      IF (.NOT.INTFL) GO TO 97
-      SKIP = L3 ==  3.OR.L3 ==  5.OR.L3 ==  8                          &
-         .OR.L3 == 11.OR.L3 == 12.OR.L3 == 19.OR.L3 == 22              &
-         .OR.L3 == 25.OR.L3 == 27.OR.L3 == 29                          &
-         .OR.L3 == 34.OR.L3 == 36.OR.L3 == 41
-      SKIP = .NOT.SKIP
-      IF (SKIP) GO TO 98
 !
-!   Check whether this statement refers to an argument or a function
-!   name
-      IF (L3 == 3 .OR. L3 == 22 .OR. L3 == 25 .OR.                     &
-                       L3 == 34 .OR. L3 == 41) GO TO 97
-      IF(index(STAMNT(LK(L3)+1:LENST), 'FUNCTION')/= .0 .OR.           &
-         index(STAMNT(LK(L3)+1:LENST), 'function') /= 0) GO TO 97
-      DO L20 = 1, NOARG
-         IF(index(STAMNT(LK(L3)+1:LENST), ARGNAM(L20)(:LENARG(L20)))   &
-          /=  0) GO TO 97
-      END DO
-      SKIP = .TRUE.
-      GO TO 98
+      CALL TYPE_DECLARATIONS(STAMNT,L3,LENST,LK(L3),LOWERCASE)
+
+      LPROGRAM_ENTITY = L3 == 3 .OR. L3 == 22 .OR. L3 == 34 .OR. L3 == 41
+      IF (INTFL) THEN
+!       Check for program entities
+        SKIP = L3 ==  3 .OR. L3 ==  5 .OR. L3 ==  8 .OR.                 &
+               L3 == 11 .OR. L3 == 12 .OR. L3 == 19 .OR. L3 == 22 .OR.   &
+               L3 == 25 .OR. L3 == 27 .OR. L3 == 29 .OR.                 &
+               L3 == 34 .OR. L3 == 36 .OR. L3 == 41
+        SKIP = .NOT.SKIP
+        IF (SKIP) THEN
+          IF(.NOT.ASSIGN .AND. LPROGRAM_ENTITY) &
+            WRITE (*, '('' Starting '', A)') TRIM(NAME)
+          RETURN
+        ENDIF
 !
-!   Keep procedure name for END statement
-   97 call name_of(nameof, stamnt(lk(l3)+2:lenst), name_length)
-      IF(L3 == 3.OR.L3 == 22.OR.L3 == 34.OR.                           &
-      L3 == 41) NAME = KEYS(L3)(:LK(L3))//NAMEOF(:name_length)
+!       Check whether this statement refers to an argument or a 
+!       function name
+        ENTITY: IF (.NOT. LPROGRAM_ENTITY) THEN
+          FUNC: IF(INDEX(STAMNT(LK(L3)+1:LENST), 'FUNCTION') /= 0 .OR.     &
+             INDEX(STAMNT(LK(L3)+1:LENST), 'function') /= 0) THEN
+            LPROGRAM_ENTITY = .TRUE.
+          ELSE
+            LARGUMENT = .FALSE.
+            DO L20 = 1, NOARG
+              IF(INDEX(STAMNT(LK(L3)+1:LENST), ARGNAM(L20)(:LENARG(L20)))  &
+                 /=  0) THEN
+                LARGUMENT = .TRUE.
+                EXIT
+              ENDIF
+            END DO
+            IF(.NOT. LARGUMENT) THEN
+              SKIP = .TRUE.
+              IF (SKIP) THEN
+                IF(.NOT.ASSIGN .AND. LPROGRAM_ENTITY) &
+                  WRITE (*, '('' Starting '', A)') TRIM(NAME)
+                RETURN
+              ENDIF
+            ENDIF
+          ENDIF FUNC
+        ENDIF ENTITY
+      ENDIF
+!
+!     Keep procedure name for END statement
+      CALL NAME_OF(NAMEOF, STAMNT(LK(L3)+2:LENST), NAME_LENGTH)
+      IF(LPROGRAM_ENTITY) THEN
+        IF(LOWERCASE) THEN
+          NAME = KEYSLC(L3)(:LK(L3))//NAMEOF(:NAME_LENGTH)
+        ELSE
+          NAME = KEYS(L3)(:LK(L3))//NAMEOF(:NAME_LENGTH)
+        ENDIF
+      ENDIF
 !
 !   Get argument names for later use in skipping unnecessary
 !   specifications
@@ -824,7 +1070,8 @@
       IF(L3 == 1.OR.L3 == 5.OR.L3 == 8.OR.L3 == 12 .OR. L3 == 13       &
       .OR. L3 == 25                                                    &
       .OR.L3 == 24.AND..NOT.IFASS.OR.L3 == 27.OR.L3 == 29.OR.L3 == 36) &
-        CALL SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC, LK, FOLLOW)
+        CALL SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC, LK, FOLLOW, &
+                     NAMEOF,LOWERCASE)
 !
 !   Was, in fact, a function
       IF (INTFL.AND.L3 == 22.AND.LSAVE /= 22) THEN
@@ -833,36 +1080,35 @@
       END IF
 !
 !   Print procedure name
-   98 IF(.NOT.ASSIGN.AND.(L3 == 3.OR.L3 == 22.OR.L3 == 34.OR.L3 == 41))&
-      WRITE (*, '('' Starting '', A)') NAME
-      RETURN
+98    IF(.NOT.ASSIGN .AND. (L3 == 3.OR.L3 == 22.OR.L3 == 34.OR.L3 == 41)) &
+        WRITE (*, '('' Starting '', A)') TRIM(NAME)
    END SUBROUTINE KEYWORD
-   subroutine NAME_OF(nameof, HEADER, name_length)
+   SUBROUTINE NAME_OF(NAMEOF, HEADER, NAME_LENGTH)
 !
-   implicit none
-!   Pick out name of procedure
+   IMPLICIT NONE
+!   PICK OUT NAME OF PROCEDURE
       CHARACTER(LEN=*), INTENT(IN) :: HEADER
-      CHARACTER(LEN=*), INTENT(out):: nameof
-      integer, intent(out)         :: name_length
-      integer :: ind, indast
+      CHARACTER(LEN=*), INTENT(OUT):: NAMEOF
+      INTEGER, INTENT(OUT)         :: NAME_LENGTH
+      INTEGER :: IND, INDAST
 !
       NAMEOF = ' '
+      NAME_LENGTH = 1
 !
 !   Is there a left parenthesis or an asterisk?
-      IND = index(HEADER, '(' )
-      INDAST = index(HEADER, '*')
+      IND = INDEX(HEADER, '(' )
+      INDAST = INDEX(HEADER, '*')
       IF (IND /= 0 .AND. INDAST /= 0) IND = MIN(IND, INDAST)
       IF (IND <= LEN(NAMEOF)) THEN
-         IF (IND  ==  0) THEN
-            NAMEOF(2:) = HEADER(:LEN(HEADER))
-            name_length = min(len(header)+1, len(nameof))
+         IF (IND == 0) THEN
+            NAMEOF(2:) = HEADER(:LEN_TRIM(HEADER))
+            NAME_LENGTH = MIN(LEN_TRIM(HEADER)+1, LEN_TRIM(NAMEOF))
          ELSE
             NAMEOF(2:IND) = HEADER(:IND-1)
-            name_length = ind
+            NAME_LENGTH = IND
          END IF
       END IF
-      RETURN
-   END subroutine NAME_OF
+   END SUBROUTINE NAME_OF
    SUBROUTINE PROGRAM_UNITS( )
 !
 !***********************************************************************
@@ -889,17 +1135,17 @@
 !
       CHARACTER(LEN=1) :: CONTIN
       CHARACTER(LEN=3), PARAMETER :: FIN='END', FINLC='end'
+      CHARACTER(LEN=5) :: CLABEL
       CHARACTER(LEN=66) :: FIELD
       CHARACTER(LEN=72) :: LINE
       CHARACTER(LEN=72), PARAMETER :: BLANKV=' '
 !
-      LOGICAL :: NEWDO , NEWIF , FORM ,  ELSEBL , ASSIGN
+      LOGICAL :: ASSIGN, ELSEBL, FORM, LCOMMENT, LOWERCASE, NEWDO , NEWIF
 !
-      CHARACTER(LEN=*), PARAMETER :: USER = '+'
+      CHARACTER(LEN=1), PARAMETER :: USER = '+'
       LOGICAL :: STAT = .FALSE. , SKIP = .FALSE.
 !
-      integer :: l1,             l5, l22, kntcon, napo, lab, l9, k1,   &
-                 irtcod, nend
+      integer :: irtcod, l1, l5, l9, l22, lab, length, k1, kntcon, napo, nend
 !
 !   Start processing program units
       MXDO = 0
@@ -915,7 +1161,7 @@
       KNTCOM = 0
       NAME = ' '
       NOARG = 0
-      INTFL = INTBFL
+      INTFL = INTBFL ! interface blocks only flag
 !
 !   Set continuation line counter
     1 KNTCON = 0
@@ -925,22 +1171,42 @@
 !
 !   Read one line into an internal file,
 !   columns 73-80 of all lines are ignored.
-    2 READ (NIN , '(A)' , END = 100 , ERR = 100) LINE
-      KARD = KARD+1
+    2 CONTINUE
+      LENGTH = 0
+      BLANK_LINES: DO WHILE(LENGTH == 0)
+        READ (NIN , '(A)' , END = 100 , ERR = 100) LINE
+        IF(LINE(1:1) == ACHAR(9)) THEN
+!         Tab in first column, replace with 8 blanks
+          LINE = '        '//LINE(2:)
+        ENDIF
+        LENGTH = LEN_TRIM(LINE)
+        IF(LENGTH == 0) THEN
+!         Entire blank line, put null in first column
+          IF(.NOT.INTFL) WRITE (NOUT , '(A)') ''
+        ENDIF
+        KARD = KARD+1
+      ENDDO BLANK_LINES
 !
-!   Check whether a comment line and if so copy to buffer.
-      IF (LINE(:1) == 'C' .OR. LINE(:1) == '*' .OR. LINE(:1) ==        &
-      USER .OR. LINE == ' ' .OR. LINE(:1) == 'c'                       &
-                            .OR. LINE(:1) == '!') THEN
+!     Check whether a comment line and if so copy to buffer.
+      LCOMMENT = .FALSE.
+!     Does comment occur in first column?
+      LCOMMENT = LINE(:1) == 'C' .OR. LINE(:1) == '*' .OR. &
+                 LINE(:1) == USER .OR. LINE == ' ' .OR. &
+                 LINE(:1) == 'c' .OR. LINE(:1) == '!'
+!     Does "!" comment begin after leading blanks?
+      CLABEL = ADJUSTL(LINE)
+      LCOMMENT = LCOMMENT .OR. CLABEL(:1) == '!'
+!
+      IF (LCOMMENT) THEN
          IF (INTFL) GO TO 2
          IF (LINE(:1) == 'C' .OR. LINE(:1) == '*'                      &
          .OR. LINE(:1) == 'c') LINE(:1) = '!'
          IF (KNTCOM == KKLIM) THEN
-            WRITE (NOUT , '(A72)') (CBUF(72*L5-71:72*L5) , L5 = 1 ,    &
-            KNTCOM) , LINE
+            WRITE (NOUT , '(A)') (TRIM(CBUF(72*L5-71:72*L5)) ,         &
+                                   L5 = 1,KNTCOM) , TRIM(LINE)
             KNTCOM = 0
          ELSE IF (SYNERR .OR. .NOT.STAT) THEN
-            WRITE (NOUT , '(A72)') LINE
+            WRITE (NOUT , '(A)') TRIM(LINE)
          ELSE
             KNTCOM = KNTCOM+1
             CBUF(72*KNTCOM-71:72*KNTCOM) = LINE
@@ -961,11 +1227,10 @@
                CBUF(72*KNTCOM-71:72*KNTCOM) =                          &
                                 BLANKV(:L22-1)//LINE(L22:72)
             ELSE
-               WRITE (NOUT, '(A)') BLANKV(:L22-1)//LINE(L22:72)
+               WRITE (NOUT, '(A)') TRIM(BLANKV(:L22-1)//LINE(L22:72))
             END IF
          END IF
          LINE(L22:72) = ' '
-         IF (LINE  ==  ' ') GO TO 2
          EXIT
       END DO
 !
@@ -983,18 +1248,19 @@
             SYNERR = .TRUE.
             IF (LENST > 0) THEN
                IF (LABEL /= 0) THEN
-                  WRITE (NOUT , '(I5, 1X, A66:"&"/(5X, "&", A66:       &
-     &            "&"))') LABEL ,                                      &
-                  (STAMNT(66*L9-65:66*L9) , L9 = 1 , (LENST+65)/66)
+                  WRITE(CLABEL,'(I5)') LABEL
+                  WRITE (NOUT , '(A,1X,A,:,"&"/(5X, "&", A:"&"))') &
+                        TRIM(CLABEL),                              &
+                        (TRIM(STAMNT(66*L9-65:66*L9)), L9 = 1,(LENST+65)/66)
                ELSE
-                  WRITE (NOUT , '(6X, A66:"&"/(5X, "&", A66:"&"        &
-     &            ))') (STAMNT(66*L9-65:66*L9) , L9 = 1 , (LENST+65)/66)
+                  WRITE (NOUT , '(6X,A,:"&"/(5X, "&", A:"&"))')    &
+                        (TRIM(STAMNT(66*L9-65:66*L9)), L9 = 1,(LENST+65)/66)
                END IF
             END IF
             IF (LAB /= 0) THEN
-               WRITE (NOUT , 1000) LAB , CONTIN , FIELD
+               WRITE (NOUT , 1000) LAB , CONTIN , TRIM(FIELD)
             ELSE
-               WRITE (NOUT , 1006) CONTIN , FIELD
+               WRITE (NOUT , 1006) CONTIN , TRIM(FIELD)
             END IF
             GO TO 1
          ELSE
@@ -1031,9 +1297,18 @@
                IF (.NOT.SYNERR) THEN
                   KNTPU=KNTPU+1
                   IF (LABEL == 0) THEN
-                     WRITE (NOUT , 1001) FIN, NAME
+                     IF(LOWERCASE) THEN
+                       WRITE (NOUT , 1001) FINLC, TRIM(NAME)
+                     ELSE
+                       WRITE (NOUT , 1001) FIN, TRIM(NAME)
+                     ENDIF
                   ELSE
-                     WRITE (NOUT , 1002) LABEL , FIN, NAME
+                     WRITE(CLABEL,'(I5)') LABEL
+                     IF(LOWERCASE) THEN
+                       WRITE (NOUT , 1002) TRIM(CLABEL), FINLC, TRIM(NAME)
+                     ELSE
+                       WRITE (NOUT , 1002) TRIM(CLABEL), FIN, TRIM(NAME)
+                     ENDIF
                   END IF
                END IF
 !
@@ -1044,8 +1319,11 @@
                SYNERR = .FALSE.
                KNTCON = 0
                LENST = 0
-               IF (KNTCOM /= 0) WRITE (NOUT , '(A72)') (CBUF(72*L5-71: &
-               72*L5) , L5 = 1 , KNTCOM)
+               IF (KNTCOM /= 0) THEN
+                 DO L5 = 1 , KNTCOM
+                   WRITE (NOUT , '(A)') TRIM( CBUF(72*L5-71:72*L5) )
+                 ENDDO
+               ENDIF
                KNTCOM = 0
                NAME = ' '
                NOARG = 0
@@ -1059,9 +1337,10 @@
 !   If syntax error flag set, copy and take next statement
     6 IF (SYNERR) THEN
          IF (LAB /= 0) THEN
-            WRITE (NOUT , 1000) LAB , CONTIN , FIELD
+            WRITE (CLABEL,'(I5)') LAB
+            WRITE (NOUT , 1000) TRIM(CLABEL), CONTIN , TRIM(FIELD)
          ELSE
-            WRITE (NOUT , 1006) CONTIN , FIELD
+            WRITE (NOUT , 1006) CONTIN , TRIM(FIELD)
          END IF
          LENST = 0
          GO TO 2
@@ -1076,7 +1355,7 @@
       FORM  = .FALSE.
       ELSEBL = .FALSE.
       ASSIGN = .FALSE.
-      IF (BLANKS) CALL KEYWORD(ASSIGN, SKIP)
+      IF (BLANKS) CALL KEYWORD(ASSIGN, SKIP,LOWERCASE)
       IF (SKIP) GO TO 16
       IF (SYNERR) GO TO 6
       IF (BLANKS .AND. ASSIGN .AND. LABEL == 0) GO TO 14
@@ -1110,9 +1389,14 @@
 !
 !   Replace CONTINUE by END DO
       KNTDO = KNTDO - NEND
-      IF (NEND == 1 .AND. LENST == 10 .AND. STAMNT(:LENST) ==          &
-      'CONTINUE  ') THEN
-         STAMNT(:8) = 'END DO  '
+      IF (NEND == 1 .AND. LENST == 10 .AND. &
+          (STAMNT(:LENST) == 'CONTINUE  ' .OR. &
+           STAMNT(:LENST) == 'continue  ') )THEN
+         IF (LOWERCASE) THEN
+            STAMNT(:8) = 'end do  '
+         ELSE
+            STAMNT(:8) = 'END DO  '
+         ENDIF
          LENST = 6
       END IF
 !
@@ -1154,17 +1438,37 @@
       GO TO   3
 !
 !   End of data. Last line must be an END.
-  100 IF (LABEL == 0) WRITE (NOUT , 1001) FIN, NAME
-      IF (LABEL /= 0) WRITE (NOUT , 1002) LABEL , FIN, NAME
+  100 IF (LABEL == 0) THEN
+        IF(LOWERCASE) THEN
+          WRITE (NOUT , 1001) FINLC, TRIM(NAME)
+        ELSE
+          WRITE (NOUT , 1001) FIN, TRIM(NAME)
+        ENDIF
+      ELSE
+        WRITE(CLABEL,'(I5)') LABEL
+        IF(LOWERCASE) THEN
+          WRITE (NOUT , 1002) TRIM(CLABEL), FINLC, TRIM(NAME)
+        ELSE
+          WRITE (NOUT , 1002) TRIM(CLABEL), FIN, TRIM(NAME)
+        ENDIF
+      ENDIF
       KNTPU=KNTPU+1
-      IF (INTFL) WRITE (NOUT, '(6X, ''END INTERFACE'')')
+      IF (INTFL) THEN
+        IF(LOWERCASE) THEN
+          WRITE (NOUT, '(''END INTERFACE'',/,''END MODULE '',A)') &
+                TRIM(NAMEORIG)
+        ELSE
+          WRITE (NOUT, '(''end interface'',/,''end module '',A)') &
+                TRIM(NAMEORIG)
+        ENDIF
+      ENDIF
 !
 !   Note: if there is a syntax error, continued
 !         statements do not have a trailing &
- 1000 FORMAT(I5 , A1 , A)
- 1001 FORMAT(TR6 , A3 ,TR1, A)
- 1002 FORMAT(I5 , TR1 , A3 ,TR1, A)
- 1006 FORMAT(TR5 , A1 , A66)
+ 1000 FORMAT(A, A1 , A)
+ 1001 FORMAT(A3 ,TR1, A)
+ 1002 FORMAT(A, TR1 , A3 ,TR1, A)
+ 1006 FORMAT(A1 , A)
 !
    RETURN
    END SUBROUTINE PROGRAM_UNITS
@@ -1179,7 +1483,8 @@
 !
       INTEGER, PARAMETER :: LLIMIT = LEN-(LEN/66-1)*6
       CHARACTER(LEN=LEN) :: OUT
-      CHARACTER(LEN = 1) :: AMP
+      CHARACTER(LEN=1)   :: AMP      
+      CHARACTER(LEN=5)   :: CLABEL
 !
       LOGICAL, INTENT(IN) :: FORM , ELSEBL
 !
@@ -1308,16 +1613,17 @@
          AMP = ' '
       END IF
       IF (LABEL /= 0) THEN
-         WRITE (NOUT , 1003) LABEL , STAMNT(:MIN(LENST, 66)), AMP
+         WRITE(CLABEL,'(I5)') LABEL
+         WRITE (NOUT , 1003) TRIM(CLABEL), TRIM(STAMNT(:MIN(LENST, 66))), AMP
       ELSE
          IF (LENST < LEN-6) THEN
-            WRITE (NOUT , 1004) STAMNT(:MIN(LENST,66)), AMP
+            WRITE (NOUT , 1004) TRIM(STAMNT(:MIN(LENST,66))), AMP
          ELSE
-            WRITE (NOUT , '(A,A1)') STAMNT(:MIN(LENST, 66)), AMP
+            WRITE (NOUT , '(A,A1)') TRIM(STAMNT(:MIN(LENST, 66))), AMP
          END IF
       END IF
-      IF (LENST > 66) WRITE (NOUT , 1005)                              &
-     &('&', STAMNT(66*L6-65:66*L6) , L6 = 2 , (LENST+65)/66)
+      IF (LENST > 66) WRITE (NOUT , 1005) &
+         ('&', TRIM(STAMNT(66*L6-65:66*L6)) , L6 = 2,(LENST+65)/66)
       GO TO  11
 !
 !   Write OUT to output unit
@@ -1328,9 +1634,10 @@
          AMP =' '
       END IF
       IF (LABEL /= 0) THEN
-         WRITE (NOUT , 1003) LABEL , OUT(:MIN(LOUT, 66)), AMP
+         WRITE(CLABEL,'(I5)') LABEL
+         WRITE (NOUT , 1003) TRIM(CLABEL), TRIM(OUT(:MIN(LOUT, 66))), AMP
       ELSE
-         WRITE (NOUT , 1004) OUT(:MIN(LOUT, 66)), AMP
+         WRITE (NOUT , 1004) TRIM(OUT(:MIN(LOUT, 66))), AMP
       END IF
 !
 !   An & is required in col. 6 if statement has more than 2412
@@ -1343,24 +1650,26 @@
          ELSE
             AMP = ' '
          END IF
-         WRITE (NOUT , 1005) (AMP , OUT(66*L5-65:66*L5) , L5 = 2 , (   &
-         LOUT+65)/66)
+         WRITE (NOUT , 1005) (AMP , TRIM(OUT(66*L5-65:66*L5)), &
+                             L5 = 2,(LOUT+65)/66)
       END IF
 !
 !   Write any comments following statement
    11 IF (KNTCOM /= 0) THEN
-         WRITE (NOUT ,'(A72)') (CBUF(72*L5-71:72*L5) , L5 = 1 , KNTCOM)
+         DO L5 = 1 , KNTCOM
+           WRITE (NOUT ,'(A)') TRIM( CBUF(72*L5-71:72*L5) )
+         ENDDO
          KNTCOM = 0
       END IF
 !
- 1003 FORMAT(I5 , TR1, A, A)
- 1004 FORMAT(TR6, A, A)
- 1005 FORMAT(TR5 , A , A:'&' )
+ 1003 FORMAT(A, TR1, A, TR1, A)
+ 1004 FORMAT(A, TR1, A)
+ 1005 FORMAT(A, A, :, TR1,'&' )
 !
    RETURN
    END SUBROUTINE REFORM
-   SUBROUTINE SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC,            &
-      LK, FOLLOW)
+   SUBROUTINE SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC, LK, FOLLOW, &
+                      NAMEOF,LOWERCASE)
 !
 !   Special treatment for peculiar Fortran syntax
 !
@@ -1368,21 +1677,22 @@
 !
       USE STATISTICS
    implicit none
-!
-      INTEGER, PARAMETER :: NUMLEN = 5
-!
-      CHARACTER(LEN=*), INTENT(OUT) :: BUFFER
-      INTEGER, INTENT(IN) :: NKEY
-      INTEGER, INTENT(IN), dimension(:) :: LK
-      CHARACTER(LEN=*), INTENT(IN), dimension(:) :: KEYS, KEYSLC
-      CHARACTER(LEN=32)     :: NAMEOF
-      CHARACTER(LEN=NUMLEN) :: NUMBER
-!
+      CHARACTER (LEN=*), INTENT(OUT) :: BUFFER
+      CHARACTER (LEN=*), INTENT(IN), DIMENSION(:) :: KEYS, KEYSLC
       INTEGER, INTENT(IN OUT) :: L3, NEXT
-      LOGICAL, INTENT(IN), dimension(:) :: FOLLOW
+      INTEGER, INTENT(IN) :: NKEY
+      INTEGER, INTENT(IN), DIMENSION(:) :: LK
+      LOGICAL :: LOWERCASE
+      LOGICAL, INTENT(IN), DIMENSION(:) :: FOLLOW
+!
+      CHARACTER (LEN=*), INTENT(INOUT)  :: NAMEOF
+      INTEGER, PARAMETER :: NUMLEN = 5
+      CHARACTER(LEN=NUMLEN) :: NUMBER
+
+!
       LOGICAL :: IFASSIGN
-      integer ::         ind,        l20, istar, lparen, napos, ndigit,&
-                 nparen, l10, ilp, isss, limit, name_length
+      INTEGER :: ILP, IND, IPOS, ISSS, ISTAR, L10, L20,  LIMIT, LPAREN, &
+                 NAME_LENGTH, NAPOS, NDIGIT, NPAREN
 !
       IFASSIGN = .FALSE.
 !
@@ -1395,7 +1705,7 @@
                LLE(STAMNT(IND-1:IND-1), '9'))                          &
                STAMNT(IND:IND+5) = ' WHILE'
          END IF
-         GO TO 99
+         RETURN
       END IF
 !
 !   Deal with IMPLICIT with non-standard length specifiers
@@ -1426,7 +1736,7 @@
                      ILP = index(STAMNT(L10+2:LENST), '(')
                      IF (ILP  ==  0) THEN
                         SYNERR = .TRUE.
-                        GO TO 99
+                        RETURN
                      ELSE
                         STAMNT(L10+ILP:L10+ILP) = ')'
                      END IF
@@ -1443,17 +1753,23 @@
                END IF
             END DO
          END IF
-         GO TO 99
+         RETURN
       END IF
 !
 !   An ASSIGN label must be followed by a blank and a * specifier
 !   converted to (...)
       IF(L3 == 1 .AND. STAMNT(:7 )  ==  'ASSIGN '     .OR.             &
+         L3 == 1 .AND. STAMNT(:7 )  ==  'assign '     .OR.             &
          L3 == 5 .AND. STAMNT(:11)  ==  'CHARACTER *' .OR.             &
+         L3 == 5 .AND. STAMNT(:11)  ==  'character *' .OR.             &
          L3 == 8 .AND. STAMNT(:9 )  ==  'COMPLEX *'   .OR.             &
+         L3 == 8 .AND. STAMNT(:9 )  ==  'complex *'   .OR.             &
          L3 == 27.AND. STAMNT(:9 )  ==  'INTEGER *'   .OR.             &
+         L3 == 27.AND. STAMNT(:9 )  ==  'integer *'   .OR.             &
          L3 == 29.AND. STAMNT(:9 )  ==  'LOGICAL *'   .OR.             &
-         L3 == 36.AND. STAMNT(:6 )  ==  'REAL *'          ) THEN
+         L3 == 29.AND. STAMNT(:9 )  ==  'logical *'   .OR.             &
+         L3 == 36.AND. STAMNT(:6 )  ==  'REAL *'      .OR.             &
+         L3 == 36.AND. STAMNT(:6 )  ==  'real *'          ) THEN
          IF (L3 < 8) THEN
             ISSS = L3+7
          ELSE IF (L3 < 30) THEN
@@ -1468,37 +1784,42 @@
          DO L20 = ISSS, LENST
             IF(STAMNT(L20:L20)  ==  ' ') CYCLE
             NUMBER(:1) = STAMNT(L20:L20)
-            IF(LGE(STAMNT(L20:L20),'0') .AND. LLE(STAMNT(L20:L20),'9') &
-            ) GO TO 21
+            IF(LGE(STAMNT(L20:L20),'0') .AND. LLE(STAMNT(L20:L20),'9') ) &
+              GO TO 21
             GO TO 1
          END DO
          SYNERR = .TRUE.
-         GO TO 99
-   21    DO NEXT = L20+1, LENST
-            IF(STAMNT(NEXT:NEXT)  ==  ' ') CYCLE
-            IF(LLT(STAMNT(NEXT:NEXT), '0') .OR. LGT(STAMNT(NEXT:NEXT), &
-            '9')) GO TO 19
+         RETURN
+   21    DO IPOS = L20+1, LENST
+            IF(STAMNT(IPOS:IPOS)  ==  ' ') CYCLE
+            IF(LLT(STAMNT(IPOS:IPOS), '0') .OR. &
+               LGT(STAMNT(IPOS:IPOS), '9')) GO TO 19
             NDIGIT = NDIGIT + 1
             IF (NDIGIT  >  NUMLEN) THEN
                SYNERR = .TRUE.
-               GO TO 99
+               RETURN
             END IF
-            NUMBER(NDIGIT:NDIGIT) = STAMNT(NEXT:NEXT)
+            NUMBER(NDIGIT:NDIGIT) = STAMNT(IPOS:IPOS)
          END DO
          SYNERR = .TRUE.
-         GO TO 99
+         RETURN
       END IF
       GO TO 1
 !
 !   Insert the blank or parentheses
-   19 IF (LENST >= LEN-1) THEN
+   19 NEXT = IPOS
+      IF (LENST >= LEN-1) THEN
          OVFLW = .TRUE.
-         GO TO 99
+         RETURN
       END IF
       BUFFER(NEXT:LENST) = STAMNT(NEXT:LENST)
       IF (L3 == 1) THEN
          LENST = LENST+2
-         STAMNT(NEXT:NEXT+3) = ' TO '
+         IF(LOWERCASE) THEN
+           STAMNT(NEXT:NEXT+3) = ' to '
+         ELSE
+           STAMNT(NEXT:NEXT+3) = ' TO '
+         ENDIF
          STAMNT(NEXT+4:LENST) = BUFFER(NEXT+2:LENST-2)
       ELSE
          LENST = LENST+1
@@ -1525,19 +1846,20 @@
     2 IF (L3  ==  24 ) THEN
          LPAREN = 1
          NAPOS = 0
-         DO NEXT = 5, LENST
-            IF (STAMNT(NEXT:NEXT)  ==  "'") NAPOS = 1 - NAPOS
+         DO IPOS = 5, LENST
+            IF (STAMNT(IPOS:IPOS)  ==  "'") NAPOS = 1 - NAPOS
             IF (NAPOS  ==  1) CYCLE
-            IF (STAMNT(NEXT:NEXT)  ==  '(' ) LPAREN = LPAREN+1
-            IF (STAMNT(NEXT:NEXT)  ==  ')' ) LPAREN = LPAREN-1
+            IF (STAMNT(IPOS:IPOS)  ==  '(' ) LPAREN = LPAREN+1
+            IF (STAMNT(IPOS:IPOS)  ==  ')' ) LPAREN = LPAREN-1
             IF (LPAREN  ==  0) GO TO 5
          END DO
-         GO TO 99
-    5    NEXT = NEXT+1
-         DO L3 = 1, NKEY
-            IF (FOLLOW(L3) .AND.(STAMNT(NEXT+1:NEXT+LK(L3)) == KEYS(L3)&
-                          .OR. STAMNT(NEXT+1:NEXT+LK(L3)) == KEYSLC(L3)&
+         RETURN
+    5    NEXT = IPOS+1
+         DO IPOS = 1, NKEY
+            IF (FOLLOW(IPOS) .AND.(STAMNT(NEXT+1:NEXT+LK(IPOS)) == KEYS(IPOS)&
+                          .OR. STAMNT(NEXT+1:NEXT+LK(IPOS)) == KEYSLC(IPOS)&
              )) THEN
+               L3 = IPOS
                NEXT = NEXT+LK(L3)+1
                IF(L3 == 1) IFASSIGN = .TRUE.
                GO TO 9
@@ -1549,8 +1871,12 @@
          IF(STAMNT(NEXT+1:NEXT+8)  ==  'FUNCTION'  .OR.                &
             STAMNT(NEXT+1:NEXT+8)  ==  'function') THEN
             NEXT = NEXT+9
-            call name_of(nameof, stamnt(next:lenst), name_length)
-            NAME = 'FUNCTION'//NAMEOF(:name_length)
+            CALL NAME_OF(NAMEOF, STAMNT(NEXT:LENST), NAME_LENGTH)
+            IF(LOWERCASE) THEN
+              NAME = 'function'//NAMEOF(:name_length)
+            ELSE
+              NAME = 'FUNCTION'//NAMEOF(:name_length)
+            ENDIF
             L3 = 22
 !
 !   Deal with any *
@@ -1561,11 +1887,16 @@
                   NDIGIT = LIMIT - ISTAR -3
                   IF (NDIGIT  >  NUMLEN) THEN
                      SYNERR = .TRUE.
-                     GO TO 99
+                     RETURN
                   END IF
                   NUMBER(:NDIGIT) = STAMNT(ISTAR+2:LIMIT-2)
-                  STAMNT(NEXT-5+NDIGIT:LIMIT-2) =                      &
-                                      'FUNCTION'//NAME(10:ISTAR-NEXT+8)
+                  IF(LOWERCASE) THEN
+                    STAMNT(NEXT-5+NDIGIT:LIMIT-2) =                      &
+                                        'function'//NAME(10:ISTAR-NEXT+8)
+                  ELSE
+                    STAMNT(NEXT-5+NDIGIT:LIMIT-2) =                      &
+                                        'FUNCTION'//NAME(10:ISTAR-NEXT+8)
+                  ENDIF
                   STAMNT(NEXT-8:NEXT-6+NDIGIT)  =                      &
                                       '('//NUMBER(:NDIGIT)//') '
                   IF (NDIGIT  ==  1 .AND. NUMBER(:1)  ==  '4') THEN
@@ -1578,17 +1909,17 @@
                END IF
             ELSE
                SYNERR = .TRUE.
-               GO TO 99
+               RETURN
             END IF
             GO TO 9
          END IF
       END IF
-      GO TO 99
+      RETURN
 !
 !   Insert the blank
     9 IF (LENST >= LEN-2) THEN
          OVFLW = .TRUE.
-         GO TO 99
+         RETURN
       END IF
       BUFFER(NEXT:LENST) = STAMNT(NEXT:LENST)
       LENST = LENST+1
@@ -1596,75 +1927,115 @@
       STAMNT(NEXT+1:LENST) = BUFFER(NEXT:LENST-1)
 !
 !   ASSIGN may follow IF
-      IF(.NOT.IFASSIGN) GO TO 99
+      IF(.NOT.IFASSIGN) RETURN
       NEXT = index(STAMNT(:LENST), 'TO')
       IF (NEXT == 0) NEXT = index(STAMNT(:LENST), 'to')
       IF(NEXT == 0) THEN
          SYNERR = .TRUE.
-         GO TO 99
+         RETURN
       ELSE
          LENST = LENST+2
          STAMNT(NEXT:NEXT+3) = ' TO '
          STAMNT(NEXT+4:LENST) = BUFFER(NEXT+1:LENST-3)
       END IF
-99 RETURN
    END SUBROUTINE SPECIAL
-   SUBROUTINE START( )
+   SUBROUTINE START
 !
 !   To prepare for PROGRAM_UNITS
 !
       USE DATA
-   implicit none
-      CHARACTER(LEN=16) :: NAME
+      IMPLICIT NONE
+      CHARACTER (LEN=256) :: NAME
+      INTEGER :: ISLASH,LENGTH
+      LOGICAL :: LEXIST,LEXTENSION
 !
-!   Prompt for interactive use
-      WRITE (*,'(" Type name of file, shift, max. indent level, T or F &
-        &for blank treatment,",/ " T or F for interface blocks only.")')
-      WRITE (*,'(" For simple use type only the name of the file ",    &
-            &"followed by a slash (/) and RETURN.",/                   &
-            &" Note that the name should be given WITHOUT extension!")')
-!
-!   Does standard input unit contain an input record
-      NIN = 11
-      NOUT = 12
+!   Set default values
+      NAME = ' '
       ISHIFT = 0
       MXDPTH = 0
-      BLANKS = .FALSE.
+      BLANKS = .TRUE.
       INTBFL = .FALSE.
-      READ (* , * , END = 1 , ERR = 1) NAME, ISHIFT , MXDPTH ,         &
-      BLANKS, INTBFL
+!
+!   Obtain command line arguments
+      CALL INPUT(NAME)
 !
 !   If record present, check input values are reasonable
       ISHIFT = MIN(MAX(ISHIFT , 0) , 10)
       MXDPTH = MIN(MAX(MXDPTH , 0) , 36/MAX(ISHIFT,1))
-      IF (INTBFL.AND..NOT.BLANKS) WRITE (*, '('' Interface block proces&
-     &sing cancelled as blank processing not requested'')')
+      IF (INTBFL.AND..NOT.BLANKS) WRITE (*, '('' Interface block &
+         &processing cancelled as blank processing not requested'')')
       INTBFL = BLANKS.AND.INTBFL
-      GO TO  2
+
+      IF(ISHIFT == 0) ISHIFT = 3
+      IF(MXDPTH == 0) MXDPTH = 10
+
+!     Check whether ".f" extension was given
+      length=len_trim(name)
+      lextension=.false.
+      nameorig=name
+      if(length > 2) then
+        if(name(length-1:length) == '.f') then
+          nameorig=name(1:length-2)
+          lextension=.true.
+        else if(length > 4) then
+          if(name(length-3:length) == '.for') then
+            nameorig=name(1:length-4)
+            lextension=.true.
+          else if(name(length-3:length) == '.ftn') then
+            nameorig=name(1:length-4)
+            lextension=.true.
+          endif
+        endif
+      endif
+
+      if(.not. lextension) then
+          name=trim(name)//'.f'
+      endif
 !
-!   Set default values
-    1 ISHIFT = 3
-      MXDPTH = 10
-      BLANKS = .TRUE.
-      INTBFL = .FALSE.
-      NAME = 'name'
-    2 OPEN (UNIT=NIN, FILE=TRIM(NAME)//'.f', ACTION='READ')
-      OPEN (UNIT=NOUT, FILE=TRIM(NAME)//'.f90', ACTION='WRITE')
-!
+!     Open files
+
+      inquire(file=name,exist=lexist)
+      if(.not. lexist) then
+        print *,'Input file ',trim(name),' does not exist!'
+        call terminate(1)
+      else
+        OPEN (UNIT=NIN, FILE=TRIM(NAME), ACTION='READ',access='SEQUENTIAL', &
+          status='OLD')
+      endif
+
+      if(.not. intbfl) then
+        name=trim(nameorig)//'.f90'
+      else
+        nameorig=trim(nameorig)//'_module'
+        name=trim(nameorig)//'.f90'
+      endif
+      inquire(file=name,exist=lexist)
+      if(lexist) then
+        print *,'Output file ',trim(name),' already exists!'
+        call terminate(1)
+      else
+        OPEN (UNIT=NOUT, FILE=TRIM(NAME), ACTION='WRITE',access='SEQUENTIAL', &
+          status='NEW')
+      endif
+!     Now remove preceding path to name if it exists.
+      islash = index(nameorig,'/',.true.)
+      if(islash /= 0) nameorig = nameorig(islash+1:)
+
 !   Print values to be used
-      Write (*,'(" Loop bodies will be indented by",I3/                &
+      WRITE (*,'(" Loop bodies will be indented by",I3/                &
      &           " Maximum indenting level is     ",I3)')              &
               ISHIFT , MXDPTH
       IF (BLANKS) WRITE (*,                                            &
-      '(" Significant blank proccessing requested")')
+      '(" Significant blank processing requested.")')
       IF (INTBFL) WRITE (*,                                            &
-      '('' Only interface blocks will be produced'')')
-      IF (INTBFL) WRITE (NOUT, '(6X, ''INTERFACE'')')
+      '('' Only interface blocks will be produced.'')')
+      IF (INTBFL) WRITE (NOUT, '(''MODULE '',A,/,''INTERFACE'')') &
+         TRIM(NAMEORIG)
+      WRITE(*,'(" ")')
 !
       CALL SYSTEM_CLOCK(TIME0)
-      RETURN
    END SUBROUTINE START
-   SUBROUTINE TERMINATE( )
+   SUBROUTINE TERMINATE(ICONDITION)
 !
 !   To print the final summary
 !
@@ -1672,27 +2043,237 @@
       USE DATA
    implicit none
 !
+      integer :: icondition
       integer :: itick, itime
+!
+      if(icondition == 1) call exit(1)
 !
       CALL SYSTEM_CLOCK(ITIME, ITICK)
       IF (ITICK /= 0)                                                  &
-      WRITE (*,'(" Processing complete in ", F7.3, " seconds")')       &
+      WRITE (*,'(/," Processing complete in ", F7.3, " seconds")')     &
             REAL(ITIME-TIME0)/REAL(ITICK)
       WRITE (*,'(" Maximum depth of DO-loop nesting ",I3/              &
      &           " Maximum depth of IF-block nesting",I3/              &
      &" No. of lines read  ",I17/" No. of program units read   ",I8/   &
-     &           " Global syntax error flag",L12)')                    &
+     &           " Global syntax error flag",L12,/)')                  &
                 MXDO , MXIF , KARD , KNTPU , SYNTAX
 !
       IF (OVFLW) WRITE(*,  '(" At least one statement was too long to h&
      &ave a necessary blank added")')
       IF (NONSTD) WRITE (*,  '(" At least one statement began with a no&
-     &n-standard keyword")')
+     &n-standard keyword.")')
 !
     RETURN
     END SUBROUTINE TERMINATE
+    SUBROUTINE TYPE_DECLARATIONS(STAMNT,ITYPE,LENST,LTYPE,LOWERCASE)
+!
+!   To check whether it is a type declaration keyword and convert to the
+!   new "::" syntax.
+!
+!   STAMNT - STATEMENT IN SOURCE CODE BEING PROCESSED
+!   ITYPE  - NUMERIC TYPE IN DECLARATION STATEMENT, E.G. 5=CHARACTER, 
+!            9=INTEGER, ETC.
+!   LENST  - LENGTH OF SIGNIFICANT PORTION OF STAMNT
+!   LTYPE  - LENGTH OF NUMERIC TYPE, E.G. 7 FOR INTEGER AND 4 FOR REAL.
+!   LOWERCASE - FLAG FOR CASE TYPE OF STAMNT
+!          = .TRUE. FOR LOWERCASE
+!          = .FALSE. FOR UPPERCASE
+!
+!   Peter A. Rochford, Sverdrup Technology, Inc., July 1997
+!
+    IMPLICIT NONE
+    CHARACTER (LEN=*) :: STAMNT
+    INTEGER, INTENT(IN) :: ITYPE,LTYPE
+    INTEGER, INTENT(INOUT) :: LENST
+    LOGICAL, INTENT(IN) :: LOWERCASE
+!
+    CHARACTER (LEN=LEN(STAMNT)) :: CSTRING
+    CHARACTER :: CHARTYPE_LENGTH*14
+    INTEGER :: IASTERIX,IASCIIZERO,IBLANK,IDIGITS,IFIRSTDIGIT,IFUNCTION, &
+               ILASTDIGIT,ILETTERLOW,ILETTERUP,ILOWR0,ITEST,IUPPR0, &
+               IVARARRAY
+    LOGICAL :: LNUMERIC
+!
+    iuppr0 = iachar('A') - 1
+    ilowr0 = iachar('a') - 1
+    iasciizero = iachar('0') - 1
+    type_declare: select case (itype)
+      case (5)
+!       Character type
+        call convcase(stamnt(1:lenst),cstring,lenst,.true.)
+        ifunction = index(cstring,'FUNCTION')
+        char_function_check: if(ifunction == 0) then
+
+          iasterix = index(stamnt(1:lenst),' * ')
+          iblank = index(stamnt(1:lenst),' ')
+          if(iasterix==0 .or. iasterix > ltype+1) then
+            cstring = stamnt(1:iblank)//':: '//stamnt(iblank+1:)
+            stamnt = cstring
+            lenst = lenst + 3
+          else
+!           Is character length arbitrary?
+            itest = index(stamnt(1:lenst),'( * )')
+            if(itest == 0) then
+!             Find location of last integer digit declaring character length
+              ifirstdigit = iasterix + 3
+              do idigits=ifirstdigit,lenst
+                 iletterlow = iachar(stamnt(idigits:idigits)) - ilowr0
+                 iletterup  = iachar(stamnt(idigits:idigits)) - iuppr0
+                 if(stamnt(idigits:idigits) == ' ' .or. &
+                    stamnt(idigits:idigits) == '(') then
+                    ifirstdigit = ifirstdigit + 1
+                    cycle
+                 endif
+                 if(stamnt(idigits:idigits) == ')' .or. &
+                    (iletterlow>=1 .and. iletterlow<=26) .or. &
+                    (iletterup>=1 .and. iletterup<=26) ) then
+                    exit
+                 endif
+              enddo
+              if(stamnt(idigits:idigits) == ')') then
+                ilastdigit = idigits
+              else
+                ilastdigit = idigits - 1
+              endif
+              idigits = idigits - 1
+              if(lowercase) then
+                chartype_length= ' (len='//stamnt(ifirstdigit:idigits)//') ::'
+              else
+                chartype_length= ' (LEN='//stamnt(ifirstdigit:idigits)//') ::'
+              endif
+              cstring = stamnt(1:iasterix-1)//trim(chartype_length)//' ' &
+                       //stamnt(ilastdigit+1:)
+              stamnt = cstring
+              lenst = lenst + 9 + (idigits - ifirstdigit + 1)
+            else
+              if(lowercase) then
+                chartype_length= ' (len=*) ::'
+              else
+                chartype_length= ' (LEN=*) ::'
+              endif
+              cstring = stamnt(1:iasterix-1)//trim(chartype_length)//' ' &
+                       //stamnt(itest+5:)
+              stamnt = cstring
+              lenst = lenst + 11
+            endif
+          endif
+        endif char_function_check
+      case (8,27,29,36)
+!       Type complex, integer, logical, and real
+        call convcase(stamnt(1:lenst),cstring,lenst,.true.)
+        ifunction = index(cstring,'FUNCTION')
+        function_check: if(ifunction == 0) then
+          iasterix = index(stamnt(1:lenst),' * ')
+          ivararray = 0
+          if(iasterix > 0 .and. iasterix-1/=ltype) then
+!           Check if actually a variable array
+            itest = iachar(stamnt(iasterix-1:iasterix-1))
+            if(itest < iachar('0') .or. itest > iachar('9') ) ivararray = 1
+          endif
+          asterix_check: if(iasterix == 0 .or. ivararray == 1) then
+            iblank = index(stamnt(1:lenst),' ')
+            cstring = stamnt(1:iblank)//':: '//stamnt(iblank+1:lenst)
+            stamnt = cstring
+            lenst = lenst + 3
+          else
+!           Determine if numeric or variable length assignment
+            lnumeric = .true.
+            ifirstdigit = iasterix + 3
+            do idigits=ifirstdigit,lenst
+              if(stamnt(idigits:idigits) == ' ' .or. &
+                 stamnt(idigits:idigits) == '(') then
+                 ifirstdigit = ifirstdigit + 1
+                 cycle
+              endif
+              itest = iachar(stamnt(idigits:idigits))
+              if(itest>=iachar('0') .and. itest <= iachar('9') ) then
+                 lnumeric = .true. ! Numeric length
+                 exit
+              endif
+              iletterlow = iachar(stamnt(idigits:idigits)) - ilowr0
+              iletterup  = iachar(stamnt(idigits:idigits)) - iuppr0
+              if((iletterlow>=1 .and. iletterlow<=26) .or. &
+                 (iletterup>=1 .and. iletterup<=26) ) then
+                 lnumeric = .false. ! Variable specified length
+                 exit
+              endif
+            enddo
+
+            if(lnumeric) then
+!             Find location of last integer digit declaring type length
+              do idigits=ifirstdigit,lenst
+                iletterlow = iachar(stamnt(idigits:idigits)) - ilowr0
+                iletterup  = iachar(stamnt(idigits:idigits)) - iuppr0
+                itest = iachar(stamnt(idigits:idigits))
+                if(itest>=iachar('0') .and. itest <= iachar('9') ) then
+                   cycle
+                else
+                   exit
+                endif
+              enddo
+            else
+!             Find location of last variable letter declaring type length
+              do idigits=ifirstdigit,lenst
+                iletterlow = iachar(stamnt(idigits:idigits)) - ilowr0
+                iletterup  = iachar(stamnt(idigits:idigits)) - iuppr0
+                if(stamnt(idigits:idigits) == ')' .or. &
+                   stamnt(idigits:idigits) == ' ') then
+                   exit
+                endif
+              enddo
+            endif
+            idigits = idigits - 1
+            cstring = stamnt(1:idigits)//' :: '//stamnt(idigits+1:)
+            stamnt = cstring
+            lenst = lenst + 4
+          endif asterix_check
+        endif function_check
+    end select type_declare
+
+    END SUBROUTINE TYPE_DECLARATIONS
+    SUBROUTINE USAGE
+!
+!     Report on usage for program and exit.
+
+      WRITE(*,10) ' '
+      WRITE(*,10) 'SYNOPSIS'
+      WRITE(*,10) ' '
+      WRITE(*,10) 'f2f90 filename ishift indent_level blank_flag interface_flag'
+      WRITE(*,10) ' '
+      WRITE(*,10) 'OPTIONS'
+      WRITE(*,10) ' '
+      WRITE(*,10) '  filename     - name of f77 file, with or without &
+                  &extension'
+      WRITE(*,10) '  ishift       - column indentation depth for bodies &
+                  &of do-loops '
+      WRITE(*,10) '                 and if-blocks (default 3)'
+      WRITE(*,10) '  indent_level - maximum indentation level for bodies'
+      WRITE(*,10) '  blank_flag   - flag for handling of significant blanks'
+      WRITE(*,10) '               = t for true (default)'
+      WRITE(*,10) '               = f for false'
+      WRITE(*,10) '  interface_flag - whether interface blocks only are &
+                  &required '
+      WRITE(*,10) '               = t for true'
+      WRITE(*,10) '               = f for false (default)'
+      WRITE(*,10) ' '
+      WRITE(*,10) 'COMMENTS'
+      WRITE(*,10) ' '
+      WRITE(*,10) 'Type name of file, shift, max. indent level, T or F &
+                  &for blank treatment'
+      WRITE(*,10) '  T or F for interface blocks only.'
+      WRITE(*,10) 'For simple use type only the name of the file followed &
+                  &by a slash (/) and RETURN.'
+      WRITE(*,10) ' '
+      WRITE(*,10) '@(#)RELEASE 1.6         1997.08.12' 
+      WRITE(*,10) '@(#)AUTHOR P. Rochford of Sverdrup Technology, Inc.'
+      WRITE(*,10) ' '
+!
+   10 FORMAT(5X,A)
+!
+      CALL EXIT(1)
+    END SUBROUTINE USAGE
    END MODULE ALL_PROCEDURES
-   PROGRAM CONVERT
+   PROGRAM F2F90
    USE ALL_PROCEDURES
    implicit none
 !
@@ -1703,6 +2284,5 @@
       CALL PROGRAM_UNITS( )
 !
 !   Print some statistics
-      CALL TERMINATE( )
-      STOP
-   END PROGRAM CONVERT
+      CALL TERMINATE(0)
+   END PROGRAM F2F90

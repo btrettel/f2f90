@@ -1,0 +1,173 @@
+.TH "f2f90" "l" "25 AUG 1997 " "Version: 1.6"
+.SH "NAME"
+.HP
+f2f90 \- Convert FORTRAN 77 fixed source form to FORTRAN 90 
+free source form.
+.SH "SYNOPSIS"
+.HP
+.B f2f90
+filename ishift indent_level blank_flag interface_flag
+.SH "DESCRIPTION"
+F2f90 converts Fortran 77 fixed source from code in files 
+with names ending in ".f" to f90 free source form files with
+".f90" substituted for the final ".f". 
+
+This utility also formats the code by indenting the bodies of 
+DO-loops and IF-blocks by ISHIFT columns. Statement keywords are 
+followed if necessary by a blank, and blanks within tokens are 
+suppressed; this handling of blanks is optional.
+
+If a CONTINUE statement terminates a single DO loop, it is 
+replaced by END DO.
+
+Procedure END statements have the procedure name added, if 
+blanks are handled.
+
+Statements like INTEGER*2 are converted to INTEGER(2), if blanks
+are handled. Depending on the target processor, a further global
+edit might be required (e.g. where 2 bytes correspond to KIND=1).
+Typed functions and assumed-length character specifications are
+treated similarly. The length specification *4 is removed for all
+data types except CHARACTER, as is *8 for COMPLEX. This treatment 
+of non-standard type declarations includes any non-standard 
+IMPLICIT statements.
+
+For type declaration statements the f90 "::" syntax is applied to
+types CHARACTER, INTEGER, LOGICAL, and REAL. Where possible the
+following form is applied for character declarations.
+
+CHARACTER (LEN=XX) :: VARIABLE1, VARIABLE2, ...
+
+Optionally, interface blocks only may be produced; this requires
+blanks processing to be requested. The interface blocks are 
+compatible with both the old and new source forms. 
+
+The arguments are as follows:
+.HP
+filename \- name of f77 file, with or without extension
+.HP
+ishift \- column indentation depth for bodies of DO-loops and
+IF-blocks (default 3) 
+.HP
+indent_level \- maximum indentation level for bodies
+.HB
+blank_flag \- flag for handling of significant blanks
+.RS
+.TP 3
+= T for true (default)
+.TP 3
+= F for false
+.RE
+.HP
+interface_flag \- whether interface blocks only are required 
+.RS
+.TP 3
+= T for true
+.TP 3
+= F for false (default)
+.RE
+.SS "USAGE"
+Arguments are read in via a C-shell script which are then
+passed to a modified f90 program which was obtained from CERN, 
+Geneva (c.f. Authors below). F2f90 can be called in one of 
+two ways: with just the filename, or the filename with arguments.
+
+.SH "OPTIONS"
+NONE
+
+.SH "EXAMPLES"
+Example 1:
+
+f2f90 fortran.f
+
+will produce a f90 file fortran.f90 with bodies indented by 3
+columns, at a maximum indentation level of 10, with no handling 
+of blanks or generation of interface blocks.
+
+Example 2:
+
+f2f90 fortran 2 18 T F
+
+will produce a f90 file fortran.f90 with bodies indented by 2
+columns, at a maximum indentation level of 18, with handling 
+of blanks, and no generation of interface blocks. A fortran.f
+file will be assumed even though the ".f" extension is not 
+included.
+
+Example 3:
+
+f2f90 fortran.f 0 0 t t
+
+will produce a file of interface blocks in fortran_module.f90. 
+The file will have the general form 
+
+.nf
+MODULE FORTRAN_MODULE
+
+INTERFACE
+
+\ ... "interface statements" ...
+
+END INTERFACE
+
+END MODULE FORTRAN_MODULE
+.fi
+
+which can be called within the main program via the statement
+
+.nf
+PROGRAM MAIN
+
+USE FORTRAN_MODULE
+
+\ ... "main program statements" ...
+
+END PROGRAM MAIN
+.fi
+
+.SH "FILES"
+.nf
+file.f       input file
+
+file.f90     output file
+.fi
+.SH "SEE ALSO"
+.\" Always quote multiple words for .SH, just in case
+f2c(l), f77(1), f90(1)
+.SH "DIAGNOSTICS"
+The diagnostics produced by f2f90 are intended to be self-
+explanatory.
+.SH "BUGS"
+Undoubtedly several will become evident as the program is used 
+by the general community.
+
+.SH "RESTRICTIONS"
+The program does not indent FORMAT statements or any statement 
+containing a character string with an embedded multiple blank.
+The order of comment lines and Fortran statements is slightly 
+modified if there are sequences of more than 200 comment lines.
+
+If there are syntax errors, continued lines do not have a 
+trailing &.
+
+When producing interface blocks, a check is required that any 
+dummy argument that is a procedure has a corresponding EXTERNAL 
+statement. Also, since no COMMON blocks or PARAMETER statements 
+are copied, part of an assumed-size array declaration may be
+missing. Similarly, parts of an assumed-length character symbolic 
+constant might be copied and have to be deleted. BLOCK DATA 
+statements are copied and must be deleted. These problems would 
+normally be detected by a compiler and are trivially corrected.
+
+Within a given keyword, the case must be all upper or all lower, 
+and lower case programs require blank handling for correct 
+indenting.
+
+.SH "AUTHORS"
+.HP
+Peter A. Rochford, Sverdrup Technology, Inc., Stennis Space Center, MS, USA.
+.HP
+Michael Metcalf, CERN, Geneva, Switzerland.
+.SH "HISTORY"
+This program originated from the CONVERT program written by Michael Metcalf,
+Copyright CERN, Geneva 1991, 1997. 
