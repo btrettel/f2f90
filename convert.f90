@@ -1,15 +1,14 @@
-!     Copyright CERN, Geneva 1991, 1997 - Copyright and any other
-!     appropriate legal protection of these computer programs
-!     and associated documentation reserved in all countries
-!     of the world.
-!     Author: Michael Metcalf  (MichaelMetcalf@compuserve.com)
+!     Copyright (c) Michael Metcalf (michaelmetcalf@compuserve.com)
 !
-!     Requires the option -qcharlen=14400 with IBM's xlf.
+!     Requires the option -qcharlen=14400 with IBM's xlf90.
 !
-!     Version 1.5. Differs from previous versions in that:
-!      (19/12/96)
-!                  Code modified to be Fortran 95 and ELF
-!                  compatible (no functional changes).
+!     Version 1.53. Differs from previous versions in that:      
+!             1.5   Code modified to be Fortran 95 and ELF 
+!                   compatible (no functional changes) (19/12/96).
+!             1.51  Correction to the above (14/8/97).
+!             1.52  Add write statement for first non-standard keyword  
+!                                                           (25/3/99). 
+!             1.53  Change I/O units (02/06/99). 
 !
 !***********************************************************************
 !                                                                      *
@@ -17,7 +16,7 @@
 !    A program to convert FORTRAN 77 source form to Fortran 90 source  *
 !  form. It also formats the code by indenting the bodies of DO-loops  *
 !  and IF-blocks by ISHIFT columns. Statement keywords are             *
-!  followed if necessary by a blank, and blanks within tokens are      *
+!  followed if necessary by a blank, and blanks within tokens          *
 !  are suppressed; this handling of blanks is optional.                *
 !    If a CONTINUE statement terminates a single DO loop, it is        *
 !  replaced by END DO.                                                 *
@@ -36,7 +35,7 @@
 !  compatible with both the old and new source forms.                  *
 !                                                                      *
 !    Usage: the program reads one data record in free format from the  *
-!          default input unit. This contains:                          *
+!          default input unit (NOT the command line). This contains:   *
 !                                                                      *
 !                        name of file                                  *
 !                        indentation depth                             *
@@ -55,7 +54,11 @@
 !   and for interface blocks only type                                 *
 !                               prog 0 0 t t                           *
 !   The input is read from prog.f, the output is written to prog.f90;  *
-!   there should be no tabs in the input.                              *
+!   there should be no tabs in the input. The extensions can be        *
+!   changed by modifying S/R START.                                    *
+!   USER is a character in S/R PROGRAM_UNITS that may be defined to    *
+!   identify lines in the input stream which are to be treated as      *              *
+!   comment lines (predefined to +, but could be changed to, say, #).  *
 !                                                                      *
 !   Restrictions:  The program does not indent FORMAT statements or    *
 !                any statement containing a character string with an   *
@@ -78,6 +81,11 @@
 !                  Within a given keyword, the case must be all upper  *
 !                or all lower, and lower case programs require         *
 !                blank handling for correct indenting.                 *
+!                  Blanks and non-alphanumeric characters within       *
+!                Hollerith strings in DATA statements are not          *
+!                handled correctly, nor is an ! appearing on a         *
+!                continuation line if a character string is continued  *
+!                onto that line.                                       *
 !                                                                      *
 !***********************************************************************
 !
@@ -173,7 +181,7 @@
 !   To suppress all blanks in the statement, and then to place
 !   a blank on each side of =,  +, -, * and / (but not ** or //), a
 !   blank after each ) and , and a blank before each (.
-!   No changes are made within character strings or FORMAT statememts.
+!   No changes are made within character strings or FORMAT statements.
 !
       USE DATA
 !
@@ -680,6 +688,9 @@
             GO TO 5
          END IF
       END DO
+	  IF(.NOT.NONSTD) WRITE(*, '(A/1X, A66)' )                       &
+	     ' First occurence of a non-standard statement was:',        &
+		  TRIM(stamnt(:LENST)) 
       NONSTD = .TRUE.
       GO TO  98
 !
@@ -794,7 +805,7 @@
 !   name
       IF (L3 == 3 .OR. L3 == 22 .OR. L3 == 25 .OR.                     &
                        L3 == 34 .OR. L3 == 41) GO TO 97
-      IF(index(STAMNT(LK(L3)+1:LENST), 'FUNCTION')/= .0 .OR.           &
+      IF(index(STAMNT(LK(L3)+1:LENST), 'FUNCTION') /= 0 .OR.           &
          index(STAMNT(LK(L3)+1:LENST), 'function') /= 0) GO TO 97
       DO L20 = 1, NOARG
          IF(index(STAMNT(LK(L3)+1:LENST), ARGNAM(L20)(:LENARG(L20)))   &
@@ -847,6 +858,7 @@
       integer :: ind, indast
 !
       NAMEOF = ' '
+      name_length = 1
 !
 !   Is there a left parenthesis or an asterisk?
       IND = index(HEADER, '(' )
@@ -967,7 +979,7 @@
          LINE(L22:72) = ' '
          IF (LINE  ==  ' ') GO TO 2
          EXIT
-      END DO
+      END DO      
 !
 !   Line is some form of statement; re-read.
       READ (LINE , '(BN , I5 , A1 , A66)') LAB , CONTIN , FIELD
@@ -1689,8 +1701,8 @@
       IF (NONSTD) WRITE (*,  '(" At least one statement began with a no&
      &n-standard keyword")')
 !
-    RETURN
-    END SUBROUTINE TERMINATE
+      RETURN
+      END SUBROUTINE TERMINATE
    END MODULE ALL_PROCEDURES
    PROGRAM CONVERT
    USE ALL_PROCEDURES
