@@ -2,12 +2,13 @@
 !     appropriate legal protection of these computer programs
 !     and associated documentation reserved in all countries
 !     of the world.
-!     Author: Michael Metcalf  (metcalf@cernvm.cern.ch)
+!     Author: Michael Metcalf  (metcalf@cern.ch)
 !
-!     Version 1.1. Differs from previous versions in that
+!     Requires the option -qcharlen=14400 with IBM's xlf.
 !
-!                  superfluous blanks preceding commas are suppressed;
-!                  has better protection against non-standard code.
+!     Version 1.3. Differs from previous versions in that:
+!      (30/05/94)
+!                  The program suppresses most trailing blanks.
 !
 !***********************************************************************
 !                                                                      *
@@ -33,7 +34,7 @@
 !  blanks processing to be requested. The interface blocks are         *
 !  compatible with both the old and new source forms.                  *
 !                                                                      *
-!   Usage: the program reads one data record in free format from the   *
+!    Usage: the program reads one data record in free format from the  *
 !          default input unit. This contains:                          *
 !                                                                      *
 !                        name of file                                  *
@@ -44,9 +45,11 @@
 !                                                                      *
 !   The default values in the absence of this record are:              *
 !                               name 3 10 T F                          *
-!  - to do nothing but change the source form, type e.g.:              *
+!     - to do nothing but change the source form, type e.g.:           *
 !                               name 0  0 F F                          *
-!  The input is read from name.f, the output is written to name.f90    *
+!       or simply                                                      *
+!                               name /                                 *
+!   The input is read from name.f, the output is written to name.f90   *
 !                                                                      *
 !   Restrictions:  The program does not indent FORMAT statements or    *
 !                any statement containing a character string with an   *
@@ -70,10 +73,9 @@
 !                or all lower, and lower case programs require         *
 !                blank handling for correct indenting.                 *
 !                                                                      *
-!                       VERSION OF 07/04/93                            *
 !***********************************************************************
 !
-      MODULE STRUCTURE
+   MODULE STRUCTURE
 !
 !***********************************************************************
 !   Define maximum level of DO-loop nesting, and maximum length of     *
@@ -97,22 +99,22 @@
       CHARACTER(LEN=KLEN) CBUF
       CHARACTER(LEN=42) NAME
 !
-      END MODULE STRUCTURE
-      MODULE DATA
+   END MODULE STRUCTURE
+   MODULE DATA
 !
       INTEGER, SAVE :: ISHIFT , MXDPTH , NIN , NOUT, TIME0
       LOGICAL, SAVE :: BLANKS, INTBFL
 !
-      END MODULE DATA
-      MODULE STATISTICS
+   END MODULE DATA
+   MODULE STATISTICS
 !
       INTEGER, SAVE :: MXDO , MXIF , KARD , KNTPU
 !
       LOGICAL, SAVE :: SYNTAX, OVFLW, NONSTD
 !
-      END MODULE STATISTICS
+   END MODULE STATISTICS
 !***********************************************************************
-      PROGRAM CONVERT
+   PROGRAM CONVERT
 !
 !   Initialize
       CALL START
@@ -122,8 +124,8 @@
 !
 !   Print some statistics
       CALL TERMINATE
-      END PROGRAM CONVERT
-      SUBROUTINE ARGUMENT(ARGNAM, LENARG, STAMNT, LENST, NOARG)
+   END PROGRAM CONVERT
+   SUBROUTINE ARGUMENT(ARGNAM, LENARG, STAMNT, LENST, NOARG)
 !
 !   To store the argument names and function name, if any, for later
 !   use in checking whether a specification statement is relevant to an
@@ -156,8 +158,8 @@
       ENDIF
     4 LENARG(:NOARG) = MIN(LENARG(:NOARG), 6)
 !
-      END SUBROUTINE ARGUMENT
-      SUBROUTINE BLANK
+   END SUBROUTINE ARGUMENT
+   SUBROUTINE BLANK
 !
 !   To suppress all blanks in the statement, and then to place
 !   a blank on each side of =,  +, -, * and / (but not ** or //), a
@@ -290,8 +292,8 @@
       IF (LENST.LT.LEN .AND. MOD(LENST, 66).NE.0)                      &
      &    STAMNT(LENST+1: LENST+66-MOD(LENST, 66)) = ' '
 !
-   99 END SUBROUTINE BLANK
-      SUBROUTINE IDENTIFY (IRET)
+99 END SUBROUTINE BLANK
+   SUBROUTINE IDENTIFY (IRET)
 !
 !***********************************************************************
 !   To identify statement as beginning or end of DO-loop or            *
@@ -521,8 +523,8 @@
       GO TO  99
    33 IRET = 5
 !
-   99 END SUBROUTINE IDENTIFY
-      SUBROUTINE KEYWORD(ASSIGN, SKIP)
+99 END SUBROUTINE IDENTIFY
+   SUBROUTINE KEYWORD(ASSIGN, SKIP)
 !
 !   To check whether those initial keywords of the statement which
 !   require it are followed by a blank, to add one if necessary, and
@@ -534,13 +536,13 @@
 !
       LOGICAL, INTENT(OUT) :: ASSIGN, SKIP
 INTERFACE
-      SUBROUTINE ARGUMENT(ARGNAM, LENARG, STAMNT, LENST, NOARG)
+   SUBROUTINE ARGUMENT(ARGNAM, LENARG, STAMNT, LENST, NOARG)
       CHARACTER(LEN=*), INTENT(OUT) :: ARGNAM(:)
       CHARACTER(LEN=*), INTENT(IN)  :: STAMNT
       INTEGER, INTENT(OUT) :: LENARG(:)
       INTEGER, INTENT(OUT) :: NOARG
       INTEGER, INTENT(IN)  :: LENST
-      END SUBROUTINE ARGUMENT
+   END SUBROUTINE ARGUMENT
 END INTERFACE
 !
       INTEGER, PARAMETER :: NKEY = 42, MAXLEN = 15
@@ -548,9 +550,10 @@ END INTERFACE
       CHARACTER(LEN=LEN) BUFFER
       CHARACTER(LEN=3) THREE
       CHARACTER(LEN=32) NAMEOF
-      CHARACTER(LEN=6) ARGNAM(445)
+      CHARACTER(LEN=6), SAVE :: ARGNAM(445)
       LOGICAL BLANK(NKEY), IFASS, FOLLOW(NKEY)
-      INTEGER LK(NKEY), LENARG(445)
+      INTEGER LK(NKEY)
+      INTEGER, SAVE :: LENARG(445)
 !
       PARAMETER (KEYS= (/                                              &
      &'ASSIGN         ', 'BACKSPACE      ', 'BLOCKDATA      ',         &
@@ -818,8 +821,8 @@ END INTERFACE
 !   Print procedure name
    98 IF(.NOT.ASSIGN.AND.(L3.EQ.3.OR.L3.EQ.22.OR.L3.EQ.34.OR.L3.EQ.41))&
       WRITE (*, '('' Starting '', A)') NAME
-      END SUBROUTINE KEYWORD
-      CHARACTER(*) FUNCTION NAMEOF(HEADER)
+   END SUBROUTINE KEYWORD
+   CHARACTER(*) FUNCTION NAMEOF(HEADER)
 !
 !   Pick out name of procedure
       CHARACTER(LEN=*), INTENT(IN) :: HEADER
@@ -837,8 +840,8 @@ END INTERFACE
             NAMEOF(2:IND) = HEADER(:IND-1)
          ENDIF
       ENDIF
-      END FUNCTION NAMEOF
-      SUBROUTINE PROGRAM_UNITS
+   END FUNCTION NAMEOF
+   SUBROUTINE PROGRAM_UNITS
 !
 !***********************************************************************
 !   The principal subroutine of CONVERT processes the                  *
@@ -1136,8 +1139,8 @@ END INTERFACE
  1002 FORMAT(I5 , 1X , A3 ,1X, A)
  1006 FORMAT(5X , A1 , A66)
 !
-      END SUBROUTINE PROGRAM_UNITS
-      SUBROUTINE REFORM (FORM , ELSEBL)
+   END SUBROUTINE PROGRAM_UNITS
+   SUBROUTINE REFORM (FORM , ELSEBL)
 !
 !   Performs reformatting and output of accepted statements
 !
@@ -1266,19 +1269,19 @@ END INTERFACE
 !
 !   Copied statement (if adding 6 cols. to initial line would cause
 !   total length to exceed 2640, must start it in col.1)
-    9 LENST = LENST-2
+    9 LENST = LEN_TRIM(STAMNT(:LENST))
       IF (LENST > 66) THEN
          AMP = '&'
       ELSE
          AMP = ' '
       ENDIF
       IF (LABEL /= 0) THEN
-         WRITE (NOUT , 1003) LABEL , STAMNT(:66), AMP
+         WRITE (NOUT , 1003) LABEL , STAMNT(:MIN(LENST, 66)), AMP
       ELSE
          IF (LENST < LEN-6) THEN
-            WRITE (NOUT , 1004) STAMNT(:66), AMP
+            WRITE (NOUT , 1004) STAMNT(:MIN(LENST,66)), AMP
          ELSE
-            WRITE (NOUT , '(A66,A1)') STAMNT(:66), AMP
+            WRITE (NOUT , '(A,A1)') STAMNT(:MIN(LENST, 66)), AMP
          ENDIF
       ENDIF
       IF (LENST > 66) WRITE (NOUT , 1005)                              &
@@ -1286,15 +1289,16 @@ END INTERFACE
       GO TO  11
 !
 !   Write OUT to output unit
-   10 IF (LOUT > 66) THEN
+   10 LOUT = LEN_TRIM(OUT(:LOUT))
+      IF (LOUT > 66) THEN
          AMP = '&'
       ELSE
          AMP =' '
       ENDIF
       IF (LABEL /= 0) THEN
-         WRITE (NOUT , 1003) LABEL , OUT(:66), AMP
+         WRITE (NOUT , 1003) LABEL , OUT(:MIN(LOUT, 66)), AMP
       ELSE
-         WRITE (NOUT , 1004) OUT(:66), AMP
+         WRITE (NOUT , 1004) OUT(:MIN(LOUT, 66)), AMP
       ENDIF
 !
 !   An & is required in col. 6 if statement has more than 2412
@@ -1317,12 +1321,12 @@ END INTERFACE
          KNTCOM = 0
       ENDIF
 !
- 1003 FORMAT(I5 , 1X , A66, A)
- 1004 FORMAT(6X , A66, A)
- 1005 FORMAT(5X , A , A66:'&' )
+ 1003 FORMAT(I5 , 1X , A, A)
+ 1004 FORMAT(6X , A, A)
+ 1005 FORMAT(5X , A , A:'&' )
 !
-      END SUBROUTINE REFORM
-      SUBROUTINE SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC,         &
+   END SUBROUTINE REFORM
+   SUBROUTINE SPECIAL(L3, NEXT, BUFFER, NKEY, KEYS, KEYSLC,         &
       LK, FOLLOW)
 !
 !   Special treatment for peculiar Fortran syntax
@@ -1565,8 +1569,8 @@ END INTERFACE
          STAMNT(NEXT:NEXT+3) = ' TO '
          STAMNT(NEXT+4:LENST) = BUFFER(NEXT+1:LENST-3)
       ENDIF
-   99 END SUBROUTINE SPECIAL
-      SUBROUTINE START
+99 END SUBROUTINE SPECIAL
+   SUBROUTINE START
 !
 !   To prepare for PROGRAM_UNITS
 !
@@ -1575,11 +1579,18 @@ END INTERFACE
 !
 !   Prompt for interactive use
       WRITE (*,'(" Type name of file, shift, max. indent level, T or F &
-             &for blank treatment, T or F for interface blocks only")')
+        &for blank treatment,",/ " T or F for interface blocks only.")')
+      WRITE (*,'(" For simple use type only the name of the file ",    &
+            &"followed by a slash (/) and RETURN.",/                   &
+            &" Note that the name should be given WITHOUT extension!")')
 !
 !   Does standard input unit contain an input record
       NIN = 1
       NOUT = 2
+      ISHIFT = 0
+      MXDPTH = 0
+      BLANKS = .FALSE.
+      INTBFL = .FALSE.
       READ (* , * , END = 1 , ERR = 1) NAME, ISHIFT , MXDPTH ,         &
       BLANKS, INTBFL
 !
@@ -1611,8 +1622,8 @@ END INTERFACE
       IF (INTBFL) WRITE (NOUT, '(6X, ''INTERFACE'')')
 !
       CALL SYSTEM_CLOCK(TIME0)
-      END SUBROUTINE START
-      SUBROUTINE TERMINATE
+   END SUBROUTINE START
+   SUBROUTINE TERMINATE
 !
 !   To print the final summary
 !
@@ -1634,5 +1645,5 @@ END INTERFACE
       IF (NONSTD) WRITE (*,  '(" At least one statement began with a no&
      &n-standard keyword")')
 !
-      END SUBROUTINE TERMINATE
+    END SUBROUTINE TERMINATE
 
