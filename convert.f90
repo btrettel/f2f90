@@ -6,9 +6,10 @@
 !
 !     Requires the option -qcharlen=14400 with IBM's xlf.
 !
-!     Version 1.3. Differs from previous versions in that:
-!      (30/05/94)
-!                  The program suppresses most trailing blanks.
+!     Version 1.4. Differs from previous versions in that:
+!      (27/01/95)
+!                  Handles correctly ! in column 6.
+!                  Argument INTENT error corrected.
 !
 !***********************************************************************
 !                                                                      *
@@ -45,11 +46,16 @@
 !                                                                      *
 !   The default values in the absence of this record are:              *
 !                               name 3 10 T F                          *
-!     - to do nothing but change the source form, type e.g.:           *
-!                               name 0  0 F F                          *
+!   To do nothing but change the source form of a file prog.f type     *
+!                               prog 0  0 F F                          *
 !       or simply                                                      *
-!                               name /                                 *
-!   The input is read from name.f, the output is written to name.f90   *
+!                               prog /                                 *
+!   For more extensive processing type, say,                           *
+!                               prog 3 10 t f                          *
+!   and for interface blocks only type                                 *
+!                               prog 0 0 t t                           *
+!   The input is read from prog.f, the output is written to prog.f90;  *
+!   there should be no tabs in the input.                              *
 !                                                                      *
 !   Restrictions:  The program does not indent FORMAT statements or    *
 !                any statement containing a character string with an   *
@@ -131,10 +137,10 @@
 !   use in checking whether a specification statement is relevant to an
 !   interface block.
       CHARACTER(LEN=*), INTENT(INOUT) :: ARGNAM(:)
-      CHARACTER(LEN=*), INTENT(IN)  :: STAMNT
-      INTEGER, INTENT(OUT) :: LENARG(:)
-      INTEGER, INTENT(OUT) :: NOARG
-      INTEGER, INTENT(IN)  :: LENST
+      CHARACTER(LEN=*), INTENT(IN)    :: STAMNT
+      INTEGER, INTENT(OUT)   :: LENARG(:)
+      INTEGER, INTENT(INOUT) :: NOARG
+      INTEGER, INTENT(IN)    :: LENST
 !
 !   Correct length of function name
       IF (NOARG.EQ.1) LENARG(1) = LEN_TRIM(ARGNAM(1))
@@ -537,11 +543,11 @@
       LOGICAL, INTENT(OUT) :: ASSIGN, SKIP
 INTERFACE
    SUBROUTINE ARGUMENT(ARGNAM, LENARG, STAMNT, LENST, NOARG)
-      CHARACTER(LEN=*), INTENT(OUT) :: ARGNAM(:)
-      CHARACTER(LEN=*), INTENT(IN)  :: STAMNT
-      INTEGER, INTENT(OUT) :: LENARG(:)
-      INTEGER, INTENT(OUT) :: NOARG
-      INTEGER, INTENT(IN)  :: LENST
+      CHARACTER(LEN=*), INTENT(INOUT) :: ARGNAM(:)
+      CHARACTER(LEN=*), INTENT(IN)    :: STAMNT
+      INTEGER, INTENT(OUT)   :: LENARG(:)
+      INTEGER, INTENT(INOUT) :: NOARG
+      INTEGER, INTENT(IN)    :: LENST
    END SUBROUTINE ARGUMENT
 END INTERFACE
 !
@@ -926,6 +932,7 @@ END INTERFACE
       NAPO = 0
       DO L22 = 2, 72
          IF (LINE(L22:L22) .EQ. '''') NAPO = 1 - NAPO
+         IF (L22 == 6) CYCLE
          IF (LINE(L22:L22) .NE. '!') CYCLE
          IF (NAPO .NE. 0) CYCLE
          IF (.NOT. INTFL) THEN
@@ -1401,7 +1408,7 @@ END INTERFACE
                              STAMNT(L10-2:L10+3) .EQ. 'x  (8)')THEN
                         STAMNT(L10+1:L10+3) = '   '
                      ENDIF
- 
+
                   ENDIF
                ENDIF
             END DO
@@ -1646,4 +1653,3 @@ END INTERFACE
      &n-standard keyword")')
 !
     END SUBROUTINE TERMINATE
-
