@@ -4,6 +4,75 @@
 !     of the world.
 !     Author: Michael Metcalf  (metcalf@cernvm.cern.ch)
 !
+!     Version 1.1. Differs from previous versions in that
+!
+!                  superfluous blanks preceding commas are suppressed;
+!                  has better protection against non-standard code.
+!
+!***********************************************************************
+!                                                                      *
+!                                                                      *
+!    A program to convert FORTRAN 77 source form to Fortran 90 source  *
+!  form. It also formats the code by indenting the bodies of DO-loops  *
+!  and IF-blocks by ISHIFT columns. Statement keywords are             *
+!  followed if necessary by a blank, and blanks within tokens are      *
+!  are suppressed; this handling of blanks is optional.                *
+!    If a CONTINUE statement terminates a single DO loop, it is        *
+!  replaced by END DO.                                                 *
+!    Procedure END statements have the procedure name added, if        *
+!  blanks are handled.                                                 *
+!    Statements like INTEGER*2 are converted to INTEGER(2), if blanks  *
+!  are handled. Depending on the target processor, a further global    *
+!  edit might be required (e.g. where 2 bytes correspond to KIND=1).   *
+!  Typed functions and assumed-length character specifications are     *
+!  treated similarly. The length specification *4 is removed for all   *
+!  data types except CHARACTER, as is *8 for COMPLEX. This             *
+!  treatment of non-standard type declarations includes any            *
+!  non-standard IMPLICIT statements.                                   *
+!    Optionally, interface blocks only may be produced; this requires  *
+!  blanks processing to be requested. The interface blocks are         *
+!  compatible with both the old and new source forms.                  *
+!                                                                      *
+!   Usage: the program reads one data record in free format from the   *
+!          default input unit. This contains:                          *
+!                                                                      *
+!                        name of file                                  *
+!                        indentation depth                             *
+!                        maximum indentation level                     *
+!                        whether significant blanks should be handled  *
+!                        whether interface blocks only are required    *
+!                                                                      *
+!   The default values in the absence of this record are:              *
+!                               name 3 10 T F                          *
+!  - to do nothing but change the source form, type e.g.:              *
+!                               name 0  0 F F                          *
+!  The input is read from name.f, the output is written to name.f90    *
+!                                                                      *
+!   Restrictions:  The program does not indent FORMAT statements or    *
+!                any statement containing a character string with an   *
+!                embedded multiple blank.                              *
+!                  The order of comment lines and Fortran statements   *
+!                is slightly modified if there are sequences of        *
+!                more than KKLIM (=200) comment lines.                 *
+!                  If there are syntax errors, continued lines do not  *
+!                have a trailing &.                                    *
+!                  When producing interface blocks, a check is required*
+!                that any dummy argument that is a procedure has a     *
+!                corresponding EXTERNAL statement. Also, since no      *
+!                COMMON blocks or PARAMETER statements are copied,     *
+!                part of an assumed-size array declaration may be      *
+!                missing. Similarly, parts of an assumed-length        *
+!                character symbolic constant might be copied and have  *
+!                to be deleted. BLOCK DATA statements are copied and   *
+!                must be deleted. These problems would normally be     *
+!                detected by a compiler and are trivially corrected.   *
+!                  Within a given keyword, the case must be all upper  *
+!                or all lower, and lower case programs require         *
+!                blank handling for correct indenting.                 *
+!                                                                      *
+!                       VERSION OF 07/04/93                            *
+!***********************************************************************
+!
       MODULE STRUCTURE
 !
 !***********************************************************************
@@ -45,67 +114,6 @@
 !***********************************************************************
       PROGRAM CONVERT
 !
-!***********************************************************************
-!                                                                      *
-!                                                                      *
-!    A program to convert FORTRAN 77 source form to Fortran 90 source  *
-!  form. It also formats the code by indenting the bodies of DO-loops  *
-!  and IF-blocks by ISHIFT columns. Statement keywords are             *
-!  followed if necessary by a blank, and blanks within tokens are      *
-!  are suppressed; this handling of blanks is optional.                *
-!    If a CONTINUE statement terminates a single DO loop, it is        *
-!  replaced by END DO.                                                 *
-!    Procedure END statements have the procedure name added, if        *
-!  blanks are handled.                                                 *
-!    Statements like INTEGER*2 are converted to INTEGER(2), if blanks  *
-!  are handled. Depending on the target processor, a further global    *
-!  edit might be required (e.g. where 2 bytes correspond to KIND=1).   *
-!  Typed functions and assumed-length character specifications are     *
-!  treated similarly. The length specification *4 is removed for all   *
-!  data types except CHARACTER, as is *8 for COMPLEX. This             *
-!  treatment of non-standard type declarations includes any            *
-!  non-standard IMPLICIT statements.                                   *
-!    Optionally, interface blocks only may be produced; this requires  *
-!  blanks processing to be requested. The interface blocks are         *
-!  compatible with both the old and new source forms.                  *
-!                                                                      *
-!   Usage: the program reads one data record in free format from the   *
-!          default input unit. This contains:                          *
-!                                                                      *
-!                        indentation depth                             *
-!                        maximum indentation level                     *
-!                        whether significant blanks should be handled  *
-!                        whether interface blocks only are required    *
-!                                                                      *
-!   The default values in the absence of this record are: 3 10 T F     *
-!  - to do nothing but change the source form, type e.g.: 0  0 F F     *
-!  The input is read from fort.1, the output is written to fort.2.     *
-!                                                                      *
-!   Restrictions:  The program does not indent FORMAT statements or    *
-!                any statement containing a character string with an   *
-!                embedded multiple blank.                              *
-!                  The order of comment lines and Fortran statements   *
-!                is slightly modified if there are sequences of        *
-!                more than KKLIM (=200) comment lines.                 *
-!                  If there are syntax errors, continued lines do not  *
-!                have a trailing &.                                    *
-!                  When producing interface blocks, a check is required*
-!                that any dummy argument that is a procedure has a     *
-!                corresponding EXTERNAL statement. Also, since no      *
-!                COMMON blocks or PARAMETER statements are copied,     *
-!                part of an assumed-size array declaration may be      *
-!                missing. Similarly, parts of an assumed-length        *
-!                character symbolic constant might be copied and have  *
-!                to be deleted. BLOCK DATA statements are copied and   *
-!                must be deleted. These problems would normally be     *
-!                detected by a compiler and are trivially corrected.   *
-!                  Within a given keyword, the case must be all upper  *
-!                or all lower, and lower case programs require         *
-!                blank handling for correct indenting.                 *
-!                                                                      *
-!                       VERSION OF 18/06/91                            *
-!***********************************************************************
-!
 !   Initialize
       CALL START
 !
@@ -130,7 +138,7 @@
       IF (NOARG.EQ.1) LENARG(1) = LEN_TRIM(ARGNAM(1))
 !
 !   Get any other arguments
-    2 IND1 = index(STAMNT(:LENST), '(') + 1
+      IND1 = index(STAMNT(:LENST), '(') + 1
       IF (IND1 .NE. 1 .AND. STAMNT(IND1:IND1) .NE. ')') THEN
          NEWIND = index(STAMNT(IND1+1:LENST), '(')
          IF (NEWIND.NE.0) IND1 = NEWIND + 1 + IND1
@@ -142,12 +150,13 @@
             ARGNAM(NOARG) = STAMNT(IND1:IND2)
             LENARG(NOARG) = IND2 - IND1 +1
          ENDIF
-            IF (STAMNT(IND2+1:IND2+1) .EQ. ')') GO TO 99
+            IF (STAMNT(IND2+1:IND2+1) .EQ. ')') GO TO 4
          IND1 = IND2 + 3
          GO TO 3
       ENDIF
+    4 LENARG(:NOARG) = MIN(LENARG(:NOARG), 6)
 !
-   99 END SUBROUTINE ARGUMENT
+      END SUBROUTINE ARGUMENT
       SUBROUTINE BLANK
 !
 !   To suppress all blanks in the statement, and then to place
@@ -935,7 +944,8 @@ END INTERFACE
       STAT = .TRUE.
 !
 !   Check on syntax and copy to statement buffer
-    3 IF (CONTIN /= ' ') THEN
+    3 IF (CONTIN == '0') CONTIN = ' '
+      IF (CONTIN /= ' ') THEN
          CONTIN = '&'
          IF (SYNERR) THEN
             GO TO 6
@@ -1094,10 +1104,10 @@ END INTERFACE
 !
 !   Beginning of ELSE-block
          CASE (6)
-            IF (KNTIF > 0) THEN
+            IF (KNTIF .GT. 0) THEN
                ELSEBL = .TRUE.
             ELSE
-               SYNERR = .TRUE.
+              SYNERR = .TRUE.
             ENDIF
       END SELECT
 !
@@ -1143,6 +1153,18 @@ END INTERFACE
 !
 !   If FORMAT statement, do not indent
       IF (FORM) GO TO 9
+!
+!   Remove the blanks before commas if no character string
+      IF (BLNKFL .AND. INDEX(STAMNT(:LENST), "'") == 0) THEN
+         IPNT = 1
+         DO
+            IND = INDEX(STAMNT(IPNT:LENST), ' , ')
+            IF (IND == 0) EXIT
+            IND = IPNT + IND - 1
+            STAMNT(IND:IND+2) = ',  '
+            IPNT = IND + 3
+         END DO
+      END IF
 !
 !   Reformat indented statement and write. If reformatting causes it
 !   to exceed LEN characters, it will be copied unchanged.
@@ -1375,7 +1397,7 @@ END INTERFACE
                              STAMNT(L10-2:L10+3) .EQ. 'x  (8)')THEN
                         STAMNT(L10+1:L10+3) = '   '
                      ENDIF
-
+ 
                   ENDIF
                ENDIF
             END DO
@@ -1549,22 +1571,21 @@ END INTERFACE
 !   To prepare for PROGRAM_UNITS
 !
       USE DATA
+      CHARACTER*16 NAME
 !
 !   Prompt for interactive use
-      WRITE (*,'(" Type shift, max. indent level, T or F for blank trea&
-     &tment, T or F for interface blocks only")')
+      WRITE (*,'(" Type name of file, shift, max. indent level, T or F &
+             &for blank treatment, T or F for interface blocks only")')
 !
 !   Does standard input unit contain an input record
       NIN = 1
       NOUT = 2
-      READ (* , * , END = 1 , ERR = 1) ISHIFT , MXDPTH ,               &
+      READ (* , * , END = 1 , ERR = 1) NAME, ISHIFT , MXDPTH ,         &
       BLANKS, INTBFL
 !
 !   If record present, check input values are reasonable
       ISHIFT = MIN(MAX(ISHIFT , 0) , 10)
       MXDPTH = MIN(MAX(MXDPTH , 0) , 36/MAX(ISHIFT,1))
-      OPEN (UNIT=NIN, FILE='fort.1', ACTION='READ')
-      OPEN (UNIT=NOUT, FILE='fort.2', ACTION='WRITE')
       IF (INTBFL.AND..NOT.BLANKS) WRITE (*, '('' Interface block proces&
      &sing cancelled as blank processing not requested'')')
       INTBFL = BLANKS.AND.INTBFL
@@ -1575,9 +1596,12 @@ END INTERFACE
       MXDPTH = 10
       BLANKS = .TRUE.
       INTBFL = .FALSE.
+      NAME = 'name'
+    2 OPEN (UNIT=NIN, FILE=TRIM(NAME)//'.f', ACTION='READ')
+      OPEN (UNIT=NOUT, FILE=TRIM(NAME)//'.f90', ACTION='WRITE')
 !
 !   Print values to be used
-    2 Write (*,'(" Loop bodies will be indented by",I3/                &
+      Write (*,'(" Loop bodies will be indented by",I3/                &
      &           " Maximum indenting level is     ",I3)')              &
      &        ISHIFT , MXDPTH
       IF (BLANKS) WRITE (*,                                            &
