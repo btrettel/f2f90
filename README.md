@@ -1,4 +1,4 @@
-README for f2f90: Version 1.6, Thu Aug 29, 1997
+README for f2f90: Version 1.6.1, Thu Aug 29, 1997
 Author: Peter Rochford, Sverdrup Technology, Inc.
 
 DESCRIPTION:
@@ -20,8 +20,6 @@ Makefile		Unix makefile
 README			This documentation file
 f2f90.f90		Fortran 90 conversion program
 f2f90.man		man page for f2f90
-get_argument.F90	Subroutine to get arguments from command line (requires
-			FORTRAN or C preprocessor)
 
 
 INSTALLATION:

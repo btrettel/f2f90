@@ -1,67 +1,15 @@
 !***********************************************************************
 !                                                                      *
 !     f2f90 - A program to convert FORTRAN 77 fixed source form to     *
-!             FORTRAN 90 free source form.                             *
+!             Fortran 90 free source form.                             *
 !                                                                      *
-!     Copyright (C) 1997  Peter A. Rochford, Sverdrup Technology, Inc. *
+!     f2f90 is a modified version of convert.f90                       *
+!     Copyright (c) Michael Metcalf (michaelmetcalf@compuserve.com)    *
 !                                                                      *
-!     This program conforms to the GNU GENERAL PUBLIC LICENSE          *
-!     version 2                                                        *
-!                                                                      *
-!     This program is free software; you can redistribute it and/or    *
-!     modify it under the terms of the GNU General Public License as   *
-!     published by the Free Software Foundation; either version 2 of   *
-!     the License, or (at your option) any later version.              *
-!                                                                      *
-!     This program is distributed in the hope that it will be useful,  *
-!     but WITHOUT ANY WARRANTY; without even the implied warranty of   *
-!     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the    *
-!     GNU General Public License for more details.                     *
-!                                                                      *
-!     A copy of the GNU General Public License can be obtained via     *
-!     anonymous ftp at                                                 *
-!                                                                      *
-!     ftp://prep.ai.mit.edu/pub/gnu/COPYING-2.0                        *
-!                                                                      *
-!     or by writing to                                                 *
-!                                                                      *
-!     Free Software Foundation, Inc.                                   *
-!     675 Mass Ave                                                     *
-!     Cambridge, MA 02139                                              *
-!     USA.                                                             *
-!                                                                      *
-!     f2f90 is a modified version of the Copyright convert program     *
-!     developed by Michael Metcalf at CERN, Geneva.                    *
-!                                                                      *
-!     F2F90 PROGRAM                                                    *
-!     Author: Peter Rochford  (rochford@nrlssc.navy.mil)               *
-!             Advanced Systems Group                                   *
-!             MSAAP Building 9110                                      *
-!             Stennis Space Center, MS 39529                           *
-!                                                                      *
-!     Version 1.6. Differs from CONVERT in that:                       *
-!      (08/06/97)                                                      *
-!             The f90 "::" syntax is applied for type declaration      *
-!             statements CHARACTER, INTEGER, LOGICAL, and REAL.        *
-!                                                                      *
-!             Command line processing, Makefile, and man page made     *
-!             available for UNIX systems.                              *
-!                                                                      *
-!                                                                      *
-!     CONVERT PROGRAM                                                  *
-!     Copyright CERN, Geneva 1991, 1997 - Copyright and any other      *
-!     appropriate legal protection of these computer programs          *
-!     and associated documentation reserved in all countries           *
-!     of the world.                                                    *
-!                                                                      *
-!     Author: Michael Metcalf  (metcalf@cern.ch)                       *
-!                                                                      *
-!     Requires the option -qcharlen=14400 with IBM's xlf.              *
-!                                                                      *
-!     Version 1.5. Differs from previous versions in that:             *
-!      (12/19/96)                                                      *
-!             Code modified to be Fortran 95 and ELF compatible (no    *
-!             functional changes).                                     *
+!     Version 1.6.1. Differs from previous versions in that:           *
+!      (2022-11-13)                                                    *
+!             Command line arguments are now obtained in the Fortran   *
+!             2003 standard way (no functional changes).               *
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -687,12 +635,11 @@
       CARG = ''
       IF(LGETARG) THEN 
 !       Obtain arguments directly from command line.
-!       Assumes C library is available
-        NARGC = IARGC()
+        NARGC = COMMAND_ARGUMENT_COUNT()
         IF (NARGC /= 1 .AND. NARGC /= 5) CALL USAGE
 
           DO I = 1, NARGC
-          CALL GET_ARGUMENT(I,CARG)
+          CALL GET_COMMAND_ARGUMENT(I,CARG)
 
           ARGS_CASE: SELECT CASE(I)
            CASE (1)
@@ -2046,7 +1993,7 @@
       integer :: icondition
       integer :: itick, itime
 !
-      if(icondition == 1) call exit(1)
+      if(icondition == 1) stop 1
 !
       CALL SYSTEM_CLOCK(ITIME, ITICK)
       IF (ITICK /= 0)                                                  &
@@ -2264,13 +2211,13 @@
       WRITE(*,10) 'For simple use type only the name of the file followed &
                   &by a slash (/) and RETURN.'
       WRITE(*,10) ' '
-      WRITE(*,10) '@(#)RELEASE 1.6         1997.08.12' 
-      WRITE(*,10) '@(#)AUTHOR P. Rochford of Sverdrup Technology, Inc.'
+      WRITE(*,10) '@(#)RELEASE 1.6.1       2022-11-13' 
+      WRITE(*,10) '@(#)AUTHOR Michael Metcalf, Peter A. Rochford, Ben Trettel'
       WRITE(*,10) ' '
 !
    10 FORMAT(5X,A)
 !
-      CALL EXIT(1)
+      stop 1
     END SUBROUTINE USAGE
    END MODULE ALL_PROCEDURES
    PROGRAM F2F90

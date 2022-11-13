@@ -1,7 +1,7 @@
-.TH "f2f90" "l" "25 AUG 1997 " "Version: 1.6"
+.TH "f2f90" "l" "13 NOV 2022 " "Version: 1.6.1"
 .SH "NAME"
 .HP
-f2f90 \- Convert FORTRAN 77 fixed source form to FORTRAN 90 
+f2f90 \- Convert FORTRAN 77 fixed source form to Fortran 90 
 free source form.
 .SH "SYNOPSIS"
 .HP
@@ -165,9 +165,6 @@ indenting.
 
 .SH "AUTHORS"
 .HP
-Peter A. Rochford, Sverdrup Technology, Inc., Stennis Space Center, MS, USA.
-.HP
-Michael Metcalf, CERN, Geneva, Switzerland.
+Michael Metcalf, Peter A. Rochford, Ben Trettel
 .SH "HISTORY"
-This program originated from the CONVERT program written by Michael Metcalf,
-Copyright CERN, Geneva 1991, 1997. 
+This program originated from convert.f90 written by Michael Metcalf.
