@@ -1,0 +1,17 @@
+- Make a Git repo for f2f90. Use branches to keep track of Mike Metcalf's version and the f2f90 fork. Include the file of convert.f90 version 1.53 in the repository.
+- Set the dates for the old commits to be the dates written in the files.
+- <http://www.daniellnagle.com/preconv.html>
+    - Include preconvert in the package. Commit after all of f2f90 as the file is dated 2003.
+    - Later merge preconvert's functionality into f2f90.
+- Create HISTORY.md with Mike Metcalf's brief history, and a short section on the GPL license with links and a quote from the email.
+- Have different SOURCE.md for each version.
+- Change from 3 space indentation to 4 space indentation.
+- Remove initial indentation.
+- Note Mike Metcalf's okay to release under an open source license.
+    - My email to him on 2022-11-01.
+    - <https://www.jiscmail.ac.uk/cgi-bin/wa-jisc.exe?A2=COMP-FORTRAN-90;5e70db99.99>
+        - <https://www.jiscmail.ac.uk/cgi-bin/wa-jisc.exe?A2=COMP-FORTRAN-90;a0381eba.99>
+- <https://groups.google.com/g/comp.lang.fortran/c/Lw-NT6fLj1U/m/o9MXgW2PTi8J>
+    - > Please note that the convert.f90 program is based on the INDENT program published in "FORTRAN Optimization" in 1982! At that time, tabs were not used, at least in the environment in which I worked. When problems with tabs started to arise a decade later, I found that that was no completely portable way to handle them and so documented the fact that they require preprocessing.
+- <https://groups.google.com/g/comp.lang.fortran/c/LdoVMRwEfq4/m/a5WmyTF8aP4J>
+    - > The convert.f90 program just mentioned converted itself from FORTRAN 77 and with a some work became ELF compatible, but cannot be reasonably converted to F.

@@ -6,10 +6,14 @@
 !     f2f90 is a modified version of convert.f90                       *
 !     Copyright (c) Michael Metcalf (michaelmetcalf@compuserve.com)    *
 !                                                                      *
-!     Version 1.6.1. Differs from previous versions in that:           *
+!     Version 1.7.0. Differs from previous versions in that:           *
 !      (2022-11-13)                                                    *
-!             Command line arguments are now obtained in the Fortran   *
-!             2003 standard way (no functional changes).               *
+!             Adds changes from Michael Metcalf's original convert.f90 *
+!             since f2f90 version 1.6 was developed.                   *
+!             convert.f90 1.51  Correction to the above (1997-08-14).  *
+!             convert.f90 1.52  Add write statement for first          *
+!                               non-standard keyword (1999-03-25).     *
+!             convert.f90 1.53  Change I/O units (1999-06-02).         *
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -56,7 +60,11 @@
 !   and for interface blocks only type                                 *
 !                               prog 0 0 t t                           *
 !   The input is read from prog.f, the output is written to prog.f90;  *
-!   there should be no tabs in the input.                              *
+!   there should be no tabs in the input. The extensions can be        *
+!   changed by modifying S/R START.                                    *
+!   USER is a character in S/R PROGRAM_UNITS that may be defined to    *
+!   identify lines in the input stream which are to be treated as      *
+!   comment lines (predefined to +, but could be changed to, say, #).  *
 !                                                                      *
 !   Restrictions:  The program does not indent FORMAT statements or    *
 !                any statement containing a character string with an   *
@@ -79,6 +87,11 @@
 !                  Within a given keyword, the case must be all upper  *
 !                or all lower, and lower case programs require         *
 !                blank handling for correct indenting.                 *
+!                  Blanks and non-alphanumeric characters within       *
+!                Hollerith strings in DATA statements are not          *
+!                handled correctly, nor is an ! appearing on a         *
+!                continuation line if a character string is continued  *
+!                onto that line.                                       *
 !                                                                      *
 !***********************************************************************
 !
@@ -176,7 +189,7 @@
 !   To suppress all blanks in the statement, and then to place
 !   a blank on each side of =,  +, -, * and / (but not ** or //), a
 !   blank after each ) and , and a blank before each (.
-!   No changes are made within character strings or FORMAT statememts.
+!   No changes are made within character strings or FORMAT statements.
 !
       USE DATA
 !
@@ -846,6 +859,9 @@
          END IF
       END DO
       NONSTD = .TRUE.
+      IF(.NOT.NONSTD) WRITE(*, '(A/1X, A66)' )                       &
+         ' First occurence of a non-standard statement was:',        &
+         TRIM(stamnt(:LENST)) 
       GO TO  98
 !
 !   Test for embedded blanks in keyword
@@ -1033,7 +1049,7 @@
    SUBROUTINE NAME_OF(NAMEOF, HEADER, NAME_LENGTH)
 !
    IMPLICIT NONE
-!   PICK OUT NAME OF PROCEDURE
+!   Pick out name of procedure
       CHARACTER(LEN=*), INTENT(IN) :: HEADER
       CHARACTER(LEN=*), INTENT(OUT):: NAMEOF
       INTEGER, INTENT(OUT)         :: NAME_LENGTH
@@ -2211,8 +2227,8 @@
       WRITE(*,10) 'For simple use type only the name of the file followed &
                   &by a slash (/) and RETURN.'
       WRITE(*,10) ' '
-      WRITE(*,10) '@(#)RELEASE 1.6.1       2022-11-13' 
-      WRITE(*,10) '@(#)AUTHOR Michael Metcalf, Peter A. Rochford, Ben Trettel'
+      WRITE(*,10) 'version 1.7.0       2022-11-13' 
+      WRITE(*,10) 'authors: Michael Metcalf, Peter A. Rochford, Ben Trettel'
       WRITE(*,10) ' '
 !
    10 FORMAT(5X,A)
