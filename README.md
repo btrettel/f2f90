@@ -1,4 +1,4 @@
-# f2f90 version 1.6.1, 2022-11-13
+# f2f90 version 1.7.0, 2022-11-13
 
 Authors: Michael Metcalf, Peter A. Rochford, Ben Trettel
 

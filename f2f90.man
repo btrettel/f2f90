@@ -1,4 +1,4 @@
-.TH "f2f90" "l" "13 NOV 2022 " "Version: 1.6.1"
+.TH "f2f90" "l" "13 NOV 2022 " "Version: 1.7.0"
 .SH "NAME"
 .HP
 f2f90 \- Convert FORTRAN 77 fixed source form to Fortran 90 
